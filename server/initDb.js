@@ -9,6 +9,14 @@ const SALT_ROUNDS = 10;
 // Esegue schema.sql (crea database + tabelle) e poi semina gli account
 // di default con password hashate (bcrypt non è disponibile in SQL puro).
 (async () => {
+  // Log environment variables for debugging
+  console.log('🔍 Environment variables:');
+  console.log(`   DB_HOST=${process.env.DB_HOST || 'localhost (default)'}`);
+  console.log(`   DB_PORT=${process.env.DB_PORT || '3306 (default)'}`);
+  console.log(`   DB_USER=${process.env.DB_USER || 'root (default)'}`);
+  console.log(`   DB_PASSWORD=${process.env.DB_PASSWORD ? '***' : '(empty)'}`);
+  console.log(`   DB_NAME=${process.env.DB_NAME || 'food_quality_manager (default)'}`);
+
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306', 10),
@@ -61,5 +69,7 @@ const SALT_ROUNDS = 10;
   await connection.end();
 })().catch((err) => {
   console.error('❌ Errore inizializzazione database:', err.message);
+  console.error('Stack:', err.stack);
   process.exit(1);
 });
+
