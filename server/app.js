@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const { initDb } = require('./initDb');
 
 const app = express();
 
@@ -36,7 +37,32 @@ app.get('/', (req, res) => {
   res.send('Backend Running');
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+// Su Railway il "pre-deploy command" gira in un contesto dove le reference
+// variable del plugin MySQL non sono sempre risolte, e MySQL può non essere
+// ancora raggiungibile nell'istante esatto in cui il servizio web parte:
+// per questo l'init del DB avviene qui, con qualche retry, prima di aprire
+// la porta HTTP.
+async function startServer() {
+  const PORT = process.env.PORT || 5000;
+  const MAX_ATTEMPTS = 5;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await initDb();
+      break;
+    } catch (err) {
+      console.error(`❌ Inizializzazione database fallita (tentativo ${attempt}/${MAX_ATTEMPTS}): ${err.message}`);
+      if (attempt === MAX_ATTEMPTS) {
+        console.error('Numero massimo di tentativi raggiunto, arresto del processo.');
+        process.exit(1);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+  }
+
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+  });
+}
+
+startServer();
