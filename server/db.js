@@ -1,4 +1,3 @@
-require('dotenv').config();
 const mysql = require('mysql2/promise');
 
 // Pool di connessioni MySQL (configurabile tramite file .env)
