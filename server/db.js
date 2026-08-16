@@ -1,6 +1,6 @@
 const mysql = require('mysql2/promise');
 
-// Pool di connessioni MySQL (configurabile tramite file .env)
+// Pool di connessioni MySQL (configurabile tramite variabili d'ambiente)
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306', 10),
@@ -14,3 +14,4 @@ const pool = mysql.createPool({
 });
 
 module.exports = pool;
+
