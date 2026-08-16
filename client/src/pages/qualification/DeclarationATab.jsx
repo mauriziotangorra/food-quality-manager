@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { AlertCircle, Save, Plus, Trash2 } from "lucide-react";
 import { useModal } from "../../hooks/useModal";
 import { api } from "../../services/api";
 
+const NEW_IMPEGNO_PLACEHOLDER = { it: "Nuova dichiarazione...", en: "New declaration...", fr: "Nouvelle déclaration...", es: "Nueva declaración..." };
+
 export default function DeclarationATab({ t, lang, qualData, setQualData, globalConfig, setGlobalConfig, isTestUser, saveImmediate }) {
-  const { showConfirm } = useModal();
+  const { showConfirm, showAlert } = useModal();
   const langKey = lang.toLowerCase();
+  const [savingTemplates, setSavingTemplates] = useState(false);
 
   const updateImpegno = (idx, checked) => {
     setQualData((prev) => {
@@ -22,47 +25,71 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
     }));
   };
 
-  const saveGlobalTemplates = async (nextConfig) => {
-    setGlobalConfig(nextConfig);
-    await api.saveSettings({ templates: nextConfig });
+  // "Salva Modifiche" deve salvare tutto ciò che è visibile in questa sezione:
+  // sia i template globali (nomi allergeni/impegni, editabili dal solo utente
+  // TEST/DEMO e tenuti solo in memoria finché non si salva), sia le risposte
+  // del fornitore per riga (stato/gestione/note, checkbox impegni), che
+  // vivono in qualData e vanno salvate tramite saveImmediate.
+  const saveTemplates = async () => {
+    setSavingTemplates(true);
+    try {
+      const qualOk = await saveImmediate(qualData);
+      if (!qualOk) return; // saveImmediate ha già mostrato l'errore
+      await api.saveSettings({ templates: globalConfig });
+      showAlert("Modifiche salvate con successo!");
+    } catch (e) {
+      showAlert(e.message || "Errore durante il salvataggio");
+    } finally {
+      setSavingTemplates(false);
+    }
   };
 
   const updateGlobalImpegnoA = (idx, val) => {
     const newArr = [...(globalConfig.impegniA || [])];
     newArr[idx] = { ...newArr[idx], [langKey]: val };
-    saveGlobalTemplates({ ...globalConfig, impegniA: newArr });
+    setGlobalConfig({ ...globalConfig, impegniA: newArr });
   };
 
   const addGlobalImpegnoA = () => {
-    const newArr = [
-      ...(globalConfig.impegniA || []),
-      { id: `impA_${Date.now()}`, it: "Nuova dichiarazione...", en: "New declaration...", fr: "Nouvelle déclaration...", es: "Nueva declaración..." },
-    ];
-    saveGlobalTemplates({ ...globalConfig, impegniA: newArr });
+    const newArr = [...(globalConfig.impegniA || []), { id: `impA_${Date.now()}`, it: "", en: "", fr: "", es: "" }];
+    setGlobalConfig({ ...globalConfig, impegniA: newArr });
   };
 
   const removeGlobalImpegnoA = (idx) => {
     showConfirm("Eliminare questo impegno globalmente?", () => {
-      saveGlobalTemplates({ ...globalConfig, impegniA: (globalConfig.impegniA || []).filter((_, i) => i !== idx) });
+      setGlobalConfig({ ...globalConfig, impegniA: (globalConfig.impegniA || []).filter((_, i) => i !== idx) });
     });
   };
 
   const updateGlobalAllergen = (idx, val) => {
     const newArr = [...(globalConfig.allergeni || [])];
     newArr[idx] = { ...newArr[idx], [langKey]: val };
-    saveGlobalTemplates({ ...globalConfig, allergeni: newArr });
+    setGlobalConfig({ ...globalConfig, allergeni: newArr });
   };
 
   const addGlobalAllergen = () => {
-    const newArr = [...(globalConfig.allergeni || []), { id: Date.now(), it: "Nuovo Allergene", en: "New Allergen", fr: "Nouvel Allergène", es: "Nuevo Alérgeno" }];
-    saveGlobalTemplates({ ...globalConfig, allergeni: newArr });
+    const newArr = [...(globalConfig.allergeni || []), { id: Date.now(), it: "", en: "", fr: "", es: "" }];
+    setGlobalConfig({ ...globalConfig, allergeni: newArr });
   };
 
   const removeGlobalAllergen = (idx) => {
     showConfirm("Eliminare questo allergene globalmente?", () => {
-      saveGlobalTemplates({ ...globalConfig, allergeni: (globalConfig.allergeni || []).filter((_, i) => i !== idx) });
+      setGlobalConfig({ ...globalConfig, allergeni: (globalConfig.allergeni || []).filter((_, i) => i !== idx) });
     });
   };
+
+  const SaveTemplatesButton = () => (
+    <div className="flex justify-end pt-6 mt-2 border-t border-slate-200">
+      <button
+        onClick={saveTemplates}
+        disabled={savingTemplates}
+        className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+      >
+        <Save size={16} />
+        {savingTemplates ? "Salvataggio..." : "Salva Modifiche"}
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-12">
@@ -101,9 +128,10 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
                 />
                 {isTestUser ? (
                   <textarea
-                    className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px]"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none"
                     value={textValue}
                     onChange={(e) => updateGlobalImpegnoA(idx, e.target.value)}
+                    placeholder={NEW_IMPEGNO_PLACEHOLDER[langKey] || NEW_IMPEGNO_PLACEHOLDER.it}
                   />
                 ) : (
                   <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors leading-relaxed text-justify">{textValue}</span>
@@ -117,6 +145,7 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
             );
           })}
         </div>
+        {isTestUser && <SaveTemplatesButton />}
       </div>
 
       <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner overflow-x-auto relative">
@@ -128,7 +157,7 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
             </button>
           )}
         </div>
-        <table className="w-full text-left min-w-[800px]">
+        <table className="w-full table-fixed text-left min-w-[800px]">
           <thead className="text-[10px] uppercase font-black text-slate-400">
             <tr>
               <th className="pb-4 px-2 w-[35%]">Allergene</th>
@@ -143,7 +172,12 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
                 <td className="py-4 px-2 text-xs font-bold leading-tight">
                   {isTestUser ? (
                     <div className="flex items-center gap-2">
-                      <textarea className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500" value={all[langKey] || all.it} onChange={(e) => updateGlobalAllergen(idx, e.target.value)} />
+                      <textarea
+                        className="w-full min-w-0 p-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500 resize-none"
+                        value={all[langKey] || all.it || ""}
+                        onChange={(e) => updateGlobalAllergen(idx, e.target.value)}
+                        placeholder="Nuovo Allergene"
+                      />
                       <button onClick={() => removeGlobalAllergen(idx)} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 size={16} />
                       </button>
@@ -189,6 +223,7 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
             ))}
           </tbody>
         </table>
+        {isTestUser && <SaveTemplatesButton />}
       </div>
     </div>
   );

@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  ArrowLeft,
-  PlusCircle,
-  Edit3,
-  Trash2,
-  Image as ImageIcon,
-  UploadCloud,
-  Download,
-} from "lucide-react";
+import { ArrowLeft, PlusCircle, Edit3, Trash2 } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useModal } from "../hooks/useModal";
 import { api } from "../services/api";
@@ -21,7 +13,6 @@ export default function AdminPage({ onLogout }) {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null);
-  const [logo, setLogo] = useState(null);
 
   const loadSuppliers = () => {
     setLoading(true);
@@ -34,10 +25,6 @@ export default function AdminPage({ onLogout }) {
 
   useEffect(() => {
     loadSuppliers();
-    api
-      .getSettings()
-      .then((data) => setLogo(data?.settings?.logo || null))
-      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,26 +62,6 @@ export default function AdminPage({ onLogout }) {
     });
   };
 
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const uploaded = await api.uploadFile("global", file);
-      await api.saveSettings({ logo: uploaded.url });
-      setLogo(uploaded.url);
-    } catch (err) {
-      showAlert(err.message || t("alertFileSize"));
-    }
-  };
-
-  const handleLogoDelete = () => {
-    showConfirm(t("alertDeletePrompt"), async () => {
-      if (logo) await api.deleteUpload(logo).catch(() => {});
-      await api.saveSettings({ logo: null });
-      setLogo(null);
-    });
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 p-10 font-sans text-slate-900">
       <div className="max-w-7xl mx-auto space-y-12">
@@ -111,38 +78,6 @@ export default function AdminPage({ onLogout }) {
           >
             <PlusCircle size={20} /> Nuovo Fornitore
           </button>
-        </div>
-
-        {/* Logo ufficiale */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border">
-          <div className="flex items-center gap-4 mb-6">
-            <ImageIcon className="text-blue-600" />
-            <h3 className="font-black uppercase text-sm">{t("logoSetupTitle")}</h3>
-          </div>
-          <div className="relative group bg-slate-50 border-2 border-dashed p-10 rounded-3xl flex flex-col items-center justify-center gap-3">
-            {logo ? (
-              <>
-                <img src={logo} className="h-16 object-contain" alt="Logo" />
-                <div className="absolute top-4 right-4 flex gap-2 z-20">
-                  <a
-                    href={logo}
-                    download
-                    onClick={(e) => e.stopPropagation()}
-                    className="bg-white p-2 rounded-full shadow hover:text-emerald-600 text-slate-400 transition-all"
-                  >
-                    <Download size={16} />
-                  </a>
-                  <button onClick={handleLogoDelete} className="bg-white p-2 rounded-full shadow hover:text-red-600 text-slate-400 transition-all">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <UploadCloud size={48} className="text-slate-300" />
-            )}
-            <span className="text-[10px] font-black uppercase text-slate-400">{t("logoSetupHint")}</span>
-            <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleLogoUpload} />
-          </div>
         </div>
 
         {form && (

@@ -17,6 +17,13 @@ const UPLOAD_ROOT = path.join(__dirname, 'uploads');
 fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
 app.use('/uploads', express.static(UPLOAD_ROOT));
 
+// Le risposte API non vanno mai servite dalla cache del browser: i dati
+// (impostazioni, qualifiche) devono riflettere sempre l'ultimo salvataggio.
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 // --- ROUTES API ---
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/uploads', require('./routes/uploads'));

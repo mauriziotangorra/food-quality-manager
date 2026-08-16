@@ -35,11 +35,9 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
 
   const removeCert = (id) => {
     showConfirm(t("alertDeletePrompt"), () => {
-      setQualData((prev) => {
-        const next = { ...prev, certificazioni: prev.certificazioni.filter((c) => c.id !== id) };
-        saveImmediate(next);
-        return next;
-      });
+      const next = { ...qualData, certificazioni: qualData.certificazioni.filter((c) => c.id !== id) };
+      setQualData(next);
+      saveImmediate(next);
     });
   };
 
@@ -48,14 +46,13 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
     if (!file) return;
     try {
       const uploaded = await api.uploadFile(supplierId, file);
-      setQualData((prev) => {
-        const next = {
-          ...prev,
-          certificazioni: prev.certificazioni.map((c) => (c.id === id ? { ...c, fileName: uploaded.name, fileUrl: uploaded.url } : c)),
-        };
-        saveImmediate(next);
-        return next;
-      });
+      const next = {
+        ...qualData,
+        certificazioni: qualData.certificazioni.map((c) => (c.id === id ? { ...c, fileName: uploaded.name, fileUrl: uploaded.url } : c)),
+      };
+      setQualData(next);
+      const ok = await saveImmediate(next);
+      if (ok) showAlert(t("alertSaved"));
     } catch (err) {
       showAlert(err.message || t("alertFileSize"));
     }
@@ -63,13 +60,11 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
 
   const deleteCertFile = (id) => {
     showConfirm(t("alertDeletePrompt"), () => {
-      setQualData((prev) => {
-        const cert = prev.certificazioni.find((c) => c.id === id);
-        if (cert?.fileUrl) api.deleteUpload(cert.fileUrl).catch(() => {});
-        const next = { ...prev, certificazioni: prev.certificazioni.map((c) => (c.id === id ? { ...c, fileName: "", fileUrl: "" } : c)) };
-        saveImmediate(next);
-        return next;
-      });
+      const cert = qualData.certificazioni.find((c) => c.id === id);
+      if (cert?.fileUrl) api.deleteUpload(cert.fileUrl).catch(() => {});
+      const next = { ...qualData, certificazioni: qualData.certificazioni.map((c) => (c.id === id ? { ...c, fileName: "", fileUrl: "" } : c)) };
+      setQualData(next);
+      saveImmediate(next);
     });
   };
 
@@ -82,7 +77,10 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => saveImmediate(qualData)}
+            onClick={async () => {
+              const ok = await saveImmediate(qualData);
+              if (ok) showAlert(t("alertSaved"));
+            }}
             className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
           >
             <Save size={16} /> {t("save")}

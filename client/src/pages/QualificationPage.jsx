@@ -105,7 +105,7 @@ export default function QualificationPage({ onLogout }) {
   // server (PUT sovrascrive entrambi i campi): per non perdere productSpecs quando
   // si salva da quest'area, li ricarichiamo prima di scrivere.
   const saveQualDataPreservingSpecs = async (newData) => {
-    if (!supplier) return;
+    if (!supplier) return false;
     try {
       const current = await api.getQualifications(supplier.id);
       const timestamp = new Date();
@@ -115,8 +115,10 @@ export default function QualificationPage({ onLogout }) {
         lastUpdate: timestamp.toISOString(),
       });
       setLastSyncTime(timestamp.toLocaleString(lang));
+      return true;
     } catch (e) {
       showAlert(e.message || "Errore durante il salvataggio");
+      return false;
     }
   };
 

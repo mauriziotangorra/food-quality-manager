@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from "../hooks/useAuth";
 import { useModal } from "../hooks/useModal";
@@ -35,23 +35,24 @@ export default function LoginPage({ area, onBack, onSuccess }) {
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 font-sans text-slate-900">
-      <div className="max-w-md w-full bg-white p-14 rounded-[3.5rem] shadow-2xl relative text-slate-900">
+      <div className="max-w-md w-full bg-white p-12 rounded-[3rem] shadow-xl text-center border relative">
         <button
           onClick={onBack}
           className="absolute top-8 left-8 text-slate-300 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft />
         </button>
-        <h2 className="text-4xl font-black text-center uppercase tracking-tighter mb-12 leading-none text-slate-900">
+        <Lock className="mx-auto text-blue-600 mb-8" size={64} />
+        <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">
           {isAdmin ? t("loginAdminTitle") : t("loginTitle")}
         </h2>
-        <div className="space-y-8 text-slate-900">
+        <div className="space-y-8">
           {isAdmin && (
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-slate-50 border-4 border-slate-50 p-6 rounded-3xl outline-none focus:border-slate-900 text-center font-mono text-xl tracking-widest shadow-inner text-slate-900"
+              className="w-full border-4 p-6 rounded-3xl text-center font-mono text-4xl focus:border-blue-500 outline-none shadow-inner"
               placeholder={t("usernamePlaceholder")}
             />
           )}
@@ -62,7 +63,7 @@ export default function LoginPage({ area, onBack, onSuccess }) {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSubmit();
             }}
-            className="w-full bg-slate-50 border-4 border-slate-50 p-6 rounded-3xl outline-none focus:border-slate-900 text-center font-mono text-2xl uppercase tracking-widest shadow-inner text-slate-900"
+            className="w-full border-4 p-6 rounded-3xl text-center font-mono text-4xl focus:border-blue-500 outline-none shadow-inner"
             placeholder={t("passwordPlaceholder")}
           />
           <button

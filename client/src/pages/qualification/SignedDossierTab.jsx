@@ -1,5 +1,5 @@
 import React from "react";
-import { Signature, UploadCloud, Download, Trash2, FileSignature, Save } from "lucide-react";
+import { Signature, UploadCloud, Download, Trash2, FileSignature, Save, FileUp } from "lucide-react";
 import { useModal } from "../../hooks/useModal";
 import { api } from "../../services/api";
 
@@ -86,7 +86,7 @@ export default function SignedDossierTab({ t, qualData, setQualData, supplierId,
         ) : (
           <div className="relative overflow-hidden inline-block mt-4">
             <button className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl pointer-events-none flex items-center gap-3">
-              <UploadCloud size={20} /> Seleziona PDF Firmato
+              <FileUp size={20} /> Seleziona PDF Firmato
             </button>
             <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleUpload} />
           </div>

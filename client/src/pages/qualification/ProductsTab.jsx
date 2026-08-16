@@ -1,9 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import { Database, Save, Plus, Trash2 } from "lucide-react";
 import { useModal } from "../../hooks/useModal";
 
 export default function ProductsTab({ t, qualData, setQualData, saveImmediate }) {
-  const { showConfirm } = useModal();
+  const { showConfirm, showAlert } = useModal();
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const ok = await saveImmediate(qualData);
+      if (ok) showAlert("Modifiche salvate con successo!");
+      // se ok è false, saveImmediate ha già mostrato l'errore
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const updateRow = (id, field, val) => {
     setQualData((prev) => ({ ...prev, fileC: prev.fileC.map((p) => (p.id === id ? { ...p, [field]: val } : p)) }));
@@ -35,10 +47,11 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => saveImmediate(qualData)}
-            className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
           >
-            <Save size={16} /> {t("save")}
+            <Save size={16} /> {saving ? "Salvataggio..." : "Salva Prodotti"}
           </button>
           <button
             onClick={addRow}

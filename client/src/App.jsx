@@ -1,3 +1,4 @@
+import { BrowserRouter } from "react-router-dom";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ModalProvider } from "./context/ModalContext";
@@ -9,7 +10,9 @@ export default function App() {
     <LanguageProvider>
       <AuthProvider>
         <ModalProvider>
-          <PortalRouter />
+          <BrowserRouter>
+            <PortalRouter />
+          </BrowserRouter>
           <ModalHost />
         </ModalProvider>
       </AuthProvider>

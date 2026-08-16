@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import HomePage from "./HomePage";
 import LoginPage from "./LoginPage";
 import AdminPage from "./AdminPage";
@@ -6,43 +7,101 @@ import QualificationPage from "./QualificationPage";
 import TechnicalPage from "./TechnicalPage";
 import { useAuth } from "../hooks/useAuth";
 
-// Sostituisce lo state "view" del file originale (nessuna libreria di routing
-// installata nel progetto: si mantiene lo stesso pattern a stato singolo, solo
-// diviso su più file invece di un unico componente da 2900 righe).
+// Path dell'area riservata per una sessione già autenticata (null se non loggato).
+function sessionAreaPath(session) {
+  if (!session) return null;
+  if (session.role === "admin") return "/admin";
+  return session.area === "qual" ? "/qualifica" : "/tecnica";
+}
+
+// Protegge le pagine riservate: se la sessione non corrisponde al ruolo/area
+// richiesti, rimanda al login di quell'area invece di renderizzare la pagina.
+function ProtectedRoute({ role, area, loginPath, children }) {
+  const { session } = useAuth();
+  const matches = session?.role === role && (!area || session.area === area);
+  if (!matches) return <Navigate to={loginPath} replace />;
+  return children;
+}
+
 export default function PortalRouter() {
   const { session, ready, logout } = useAuth();
-  const [view, setView] = useState("home");
+  const navigate = useNavigate();
 
-  // Se al caricamento esiste già una sessione valida (token salvato), riporta
-  // l'utente direttamente nell'area corretta invece che alla home.
-  useEffect(() => {
-    if (!ready || !session) return;
-    if (session.role === "admin") setView("admin");
-    else if (session.role === "supplier") setView(session.area === "qual" ? "supplier_qual" : "supplier_tech");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
+  // Attende il ripristino della sessione (token salvato) prima di decidere le rotte,
+  // altrimenti un refresh su una pagina protetta rimbalzerebbe sempre al login.
+  if (!ready) return null;
 
   const goHome = () => {
     logout();
-    setView("home");
+    navigate("/");
   };
 
-  if (!ready) return null;
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          session ? <Navigate to={sessionAreaPath(session)} replace /> : <HomePage onNavigate={navigate} />
+        }
+      />
 
-  switch (view) {
-    case "login_admin":
-      return <LoginPage area="admin" onBack={() => setView("home")} onSuccess={() => setView("admin")} />;
-    case "login_qual":
-      return <LoginPage area="qual" onBack={() => setView("home")} onSuccess={() => setView("supplier_qual")} />;
-    case "login_tech":
-      return <LoginPage area="tech" onBack={() => setView("home")} onSuccess={() => setView("supplier_tech")} />;
-    case "admin":
-      return <AdminPage onLogout={goHome} />;
-    case "supplier_qual":
-      return <QualificationPage onLogout={goHome} />;
-    case "supplier_tech":
-      return <TechnicalPage onLogout={goHome} />;
-    default:
-      return <HomePage onNavigate={setView} />;
-  }
+      <Route
+        path="/admin/login"
+        element={
+          session?.role === "admin" ? (
+            <Navigate to="/admin" replace />
+          ) : (
+            <LoginPage area="admin" onBack={() => navigate("/")} onSuccess={() => navigate("/admin")} />
+          )
+        }
+      />
+      <Route
+        path="/qualifica/login"
+        element={
+          session?.role === "supplier" && session.area === "qual" ? (
+            <Navigate to="/qualifica" replace />
+          ) : (
+            <LoginPage area="qual" onBack={() => navigate("/")} onSuccess={() => navigate("/qualifica")} />
+          )
+        }
+      />
+      <Route
+        path="/tecnica/login"
+        element={
+          session?.role === "supplier" && session.area === "tech" ? (
+            <Navigate to="/tecnica" replace />
+          ) : (
+            <LoginPage area="tech" onBack={() => navigate("/")} onSuccess={() => navigate("/tecnica")} />
+          )
+        }
+      />
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute role="admin" loginPath="/admin/login">
+            <AdminPage onLogout={goHome} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/qualifica"
+        element={
+          <ProtectedRoute role="supplier" area="qual" loginPath="/qualifica/login">
+            <QualificationPage onLogout={goHome} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tecnica"
+        element={
+          <ProtectedRoute role="supplier" area="tech" loginPath="/tecnica/login">
+            <TechnicalPage onLogout={goHome} />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
