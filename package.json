@@ -4,15 +4,8 @@
   "description": "Food Quality Manager - International Food Pivot Srl (React + Node.js/Express + MySQL)",
   "main": "server/app.js",
   "scripts": {
-    "build": "cd client && npm run build",
-    "start": "node server/app.js",
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-    "dev:client": "cd client && npm run dev",
-    "dev:server": "cd server && npm run dev"
-  },
-  "dependencies": {},
-  "devDependencies": {
-    "concurrently": "^8.0.0"
+    "build": "cd client && npm install && npm run build",
+    "start": "node server/app.js"
   },
   "engines": {
     "node": ">=18.0.0"
