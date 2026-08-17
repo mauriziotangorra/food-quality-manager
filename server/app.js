@@ -24,6 +24,11 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// Servi il frontend React (build Vite) come file statici: la cartella
+// client/dist viene generata durante il deploy da `npm run build`.
+const CLIENT_DIST = path.join(__dirname, '../client/dist');
+app.use(express.static(CLIENT_DIST));
+
 // --- ROUTES API ---
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/uploads', require('./routes/uploads'));
@@ -32,8 +37,11 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/qualifications', require('./routes/qualifications'));
 app.use('/api/bootstrap', require('./routes/bootstrap'));
 
-app.get('/', (req, res) => {
-  res.send('Backend Running');
+// SPA fallback: qualsiasi rotta non gestita dalle API sopra viene servita
+// con l'index.html del frontend, così il router lato client (React Router)
+// può prendere il controllo della navigazione.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(CLIENT_DIST, 'index.html'));
 });
 
 // Su Railway il "pre-deploy command" gira in un contesto dove le reference
