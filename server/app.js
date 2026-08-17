@@ -40,7 +40,10 @@ app.use('/api/bootstrap', require('./routes/bootstrap'));
 // SPA fallback: qualsiasi rotta non gestita dalle API sopra viene servita
 // con l'index.html del frontend, così il router lato client (React Router)
 // può prendere il controllo della navigazione.
-app.get('*', (req, res) => {
+// NB: Express 5 (path-to-regexp v6+) non accetta più '*' come path di rotta
+// (lancia PathError "Missing parameter name" all'avvio) — un middleware
+// senza path, montato per ultimo, evita del tutto il parsing del pattern.
+app.use((req, res) => {
   res.sendFile(path.join(CLIENT_DIST, 'index.html'));
 });
 
