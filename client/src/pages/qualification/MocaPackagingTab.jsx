@@ -1,24 +1,23 @@
 import React from "react";
-import { AlertCircle, Save, UploadCloud, Download, X } from "lucide-react";
+import { Package, Save, UploadCloud, Download, X } from "lucide-react";
 import { useModal } from "../../hooks/useModal";
 import { api } from "../../services/api";
 
-const DOC_SLOTS = [
-  { key: "allergenManagementPlan", label: "Piano di Gestione degli Allergeni" },
-  { key: "contaminationRiskAssessment", label: "Valutazione del Rischio di Contaminazione" },
+const EMPTY_MOCA_PACKAGING = { moca: [], technicalSpecs: [], migrationTests: [], ppwr: [] };
+
+const ALL_SLOTS = [
+  { key: "moca", label: "Dichiarazione MOCA / Certificato di Conformità", alwaysVisible: true },
+  { key: "technicalSpecs", label: "Scheda Tecnica dell'Imballaggio" },
+  { key: "migrationTests", label: "Prove di Migrazione" },
+  { key: "ppwr", label: "Documentazione PPWR (Regolamento Imballaggi e Rifiuti da Imballaggio)" },
 ];
 
-export default function DeclarationATab({ t, lang, qualData, setQualData, globalConfig, supplierId, saveImmediate }) {
+export default function MocaPackagingTab({ t, qualData, setQualData, supplierId, saveImmediate }) {
   const { showAlert, showConfirm } = useModal();
-  const langKey = lang.toLowerCase();
+  const data = { ...EMPTY_MOCA_PACKAGING, ...(qualData.mocaPackaging || {}) };
 
-  const updateImpegno = (idx, checked) => {
-    setQualData((prev) => {
-      const impegni = Array.isArray(prev.fileA.impegni) ? [...prev.fileA.impegni] : [];
-      impegni[idx] = checked;
-      return { ...prev, fileA: { ...prev.fileA, impegni } };
-    });
-  };
+  const isPackagingSupplier = (qualData.fileC || []).some((p) => p.tipologia === "Imballaggio");
+  const slots = ALL_SLOTS.filter((s) => s.alwaysVisible || isPackagingSupplier);
 
   const handleUpload = async (key, e) => {
     const files = Array.from(e.target.files || []);
@@ -31,8 +30,8 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
         const res = await api.uploadFile(supplierId, file);
         uploaded.push({ name: res.name, url: res.url });
       }
-      const currentFiles = Array.isArray(qualData.fileA[key]) ? qualData.fileA[key] : [];
-      const next = { ...qualData, fileA: { ...qualData.fileA, [key]: [...currentFiles, ...uploaded] } };
+      const nextData = { ...data, [key]: [...data[key], ...uploaded] };
+      const next = { ...qualData, mocaPackaging: nextData };
       setQualData(next);
       const ok = await saveImmediate(next);
       if (ok) showAlert(t("alertSaved"));
@@ -44,8 +43,8 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
   const removeFile = (key, fileUrl) => {
     showConfirm(t("alertDeletePrompt"), () => {
       api.deleteUpload(fileUrl).catch(() => {});
-      const currentFiles = Array.isArray(qualData.fileA[key]) ? qualData.fileA[key] : [];
-      const next = { ...qualData, fileA: { ...qualData.fileA, [key]: currentFiles.filter((f) => f.url !== fileUrl) } };
+      const nextData = { ...data, [key]: data[key].filter((f) => f.url !== fileUrl) };
+      const next = { ...qualData, mocaPackaging: nextData };
       setQualData(next);
       saveImmediate(next);
     });
@@ -53,48 +52,34 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
 
   return (
     <div className="space-y-12">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
         <div className="flex items-center gap-6">
-          <AlertCircle size={48} className="text-slate-900" />
-          <h3 className="text-5xl font-black uppercase tracking-tighter text-slate-900">{t("tabDichiarazioneA")}</h3>
+          <Package size={48} className="text-slate-900" />
+          <h3 className="text-5xl font-black uppercase tracking-tighter text-slate-900">{t("tabMocaPackaging")}</h3>
         </div>
         <button
-          onClick={() => saveImmediate(qualData)}
+          onClick={async () => {
+            const ok = await saveImmediate(qualData);
+            if (ok) showAlert(t("alertSaved"));
+          }}
           className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
         >
           <Save size={16} /> {t("save")}
         </button>
       </div>
 
-      <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner">
-        <div className="border-b-2 border-slate-200 pb-4 mb-8">
-          <h4 className="text-2xl font-black uppercase text-slate-800">Dichiarazioni OGM, Etichettatura e Impegni Integrali</h4>
-        </div>
-        <div className="space-y-6">
-          {(globalConfig.impegniA || []).map((imp, idx) => {
-            const textValue = imp[langKey] || imp.it || "";
-            return (
-              <div key={imp.id || idx} className="flex items-start gap-4 group bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-300 transition-colors relative">
-                <input
-                  type="checkbox"
-                  className="mt-1 w-6 h-6 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 shrink-0"
-                  checked={qualData.fileA.impegni[idx] || false}
-                  onChange={(e) => updateImpegno(idx, e.target.checked)}
-                />
-                <span className="text-sm font-bold text-slate-700 group-hover:text-slate-900 transition-colors leading-relaxed text-justify">{textValue}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner space-y-8">
         <div className="border-b-2 border-slate-200 pb-4">
-          <h4 className="text-2xl font-black uppercase text-slate-800">Gestione Allergeni e Rischio di Contaminazione</h4>
+          <h4 className="text-2xl font-black uppercase text-slate-800">MOCA / Imballaggio</h4>
+          <p className="text-xs font-bold text-slate-400 mt-2">
+            Carica la documentazione relativa ai materiali a contatto con alimenti e all'imballaggio utilizzato.
+            {!isPackagingSupplier && " Aggiungi un articolo di tipo \"Imballaggio\" nella tab Prodotti per sbloccare i documenti aggiuntivi."}
+          </p>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {DOC_SLOTS.map((slot) => {
-            const files = Array.isArray(qualData.fileA[slot.key]) ? qualData.fileA[slot.key] : [];
+          {slots.map((slot) => {
+            const files = data[slot.key] || [];
             return (
               <div key={slot.key} className="bg-white p-6 rounded-2xl border border-slate-100 space-y-3">
                 <label className="text-[10px] font-black uppercase text-slate-500 block">{slot.label}</label>

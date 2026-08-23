@@ -1,69 +1,36 @@
 const express = require('express');
-const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { getGlobalSettings, saveGlobalSettings } = require('../services/settingsService');
 
 const router = express.Router();
-
-const GLOBAL_KEY = 'global';
 
 // GET /api/settings -> pubblica (logo + template servono anche in home, senza login)
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT setting_value FROM settings WHERE setting_key = ?', [GLOBAL_KEY]);
-    let value = { logo: null, templates: null };
-    if (rows.length && rows[0].setting_value) {
-      try {
-        value = JSON.parse(rows[0].setting_value);
-      } catch (e) {
-        value = { logo: null, templates: null };
-      }
-    }
-    res.json({ settings: value });
+    const settings = await getGlobalSettings();
+    res.json({ settings });
   } catch (err) {
     console.error('GET /api/settings', err);
     res.status(500).json({ error: 'Errore nel recupero delle impostazioni' });
   }
 });
 
-// Solo l'admin, oppure il fornitore TEST/DEMO (come nel comportamento originale,
-// dove solo quegli account potevano modificare i template globali).
+// Solo l'admin può modificare i template globali (dichiarazioni A/B/C,
+// griglia allergeni): i fornitori, incluso l'account TEST/DEMO, li vedono
+// solo in sola lettura nel pannello di qualifica.
 async function canEditGlobalSettings(req) {
-  if (req.auth.role === 'admin') return true;
-  if (req.auth.role !== 'supplier') return false;
-
-  const [rows] = await pool.query('SELECT name FROM suppliers WHERE id = ?', [req.auth.supplierId]);
-  if (!rows.length) return false;
-  const name = (rows[0].name || '').toUpperCase();
-  return name === 'TEST' || name === 'DEMO';
+  return req.auth.role === 'admin';
 }
 
-// PUT /api/settings -> aggiorna parzialmente (merge) la configurazione globale
+// PUT /api/settings -> aggiorna parzialmente (logo e/o templates, indipendenti)
 router.put('/', requireAuth, async (req, res) => {
   try {
     if (!(await canEditGlobalSettings(req))) {
       return res.status(403).json({ error: 'Non autorizzato a modificare le impostazioni globali' });
     }
 
-    const patch = req.body || {};
-    const [rows] = await pool.query('SELECT setting_value FROM settings WHERE setting_key = ?', [GLOBAL_KEY]);
-
-    let current = { logo: null, templates: null };
-    if (rows.length && rows[0].setting_value) {
-      try {
-        current = JSON.parse(rows[0].setting_value);
-      } catch (e) {
-        current = { logo: null, templates: null };
-      }
-    }
-
-    const merged = { ...current, ...patch };
-
-    await pool.query(
-      'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
-      [GLOBAL_KEY, JSON.stringify(merged)]
-    );
-
-    res.json({ settings: merged });
+    const settings = await saveGlobalSettings(req.body || {});
+    res.json({ settings });
   } catch (err) {
     console.error('PUT /api/settings', err);
     res.status(500).json({ error: 'Errore nel salvataggio delle impostazioni' });

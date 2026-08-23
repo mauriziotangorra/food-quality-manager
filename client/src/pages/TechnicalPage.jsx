@@ -11,12 +11,50 @@ import { pdfFirstPageToImageFile } from "../utils/pdfjsLoader";
 import CommitmentLetterCard from "./technical/CommitmentLetterCard";
 import HistoryModal from "./technical/HistoryModal";
 import SpecEditor from "./technical/SpecEditor";
+import AiSuggestionsModal from "./technical/AiSuggestionsModal";
+
+// Import che hanno un mapping AI -> campi del form (vedi aiExtract sul
+// server): Scheda Tecnica ("tecnica") e Foto Prodotto ("foto") restano
+// upload semplici, senza lettura AI.
+const AI_DOC_TYPES = new Set(["logistica", "microbiologici", "chimici", "etichetta"]);
+// Gemini legge nativamente solo PDF e immagini: un file .xls/.doc caricato
+// viene comunque allegato normalmente, semplicemente senza innescare l'AI.
+const AI_SUPPORTED_FILE_RE = /\.(pdf|jpe?g|png|webp)$/i;
+
+function mergeExtracted(docType, acc, cur) {
+  if (!acc) return cur;
+  if (docType === "microbiologici" || docType === "chimici") {
+    return { rows: [...(acc.rows || []), ...(cur.rows || [])] };
+  }
+  if (docType === "logistica") {
+    const mergeGroup = (a = {}, b = {}) => {
+      const out = { ...a };
+      Object.keys(b).forEach((k) => { if (!out[k] && b[k]) out[k] = b[k]; });
+      return out;
+    };
+    return { uvc: mergeGroup(acc.uvc, cur.uvc), box: mergeGroup(acc.box, cur.box), pallet: mergeGroup(acc.pallet, cur.pallet) };
+  }
+  if (docType === "etichetta") {
+    const nutrition = { ...(acc.nutrition || {}) };
+    Object.keys(cur.nutrition || {}).forEach((k) => { if (!nutrition[k] && cur.nutrition[k]) nutrition[k] = cur.nutrition[k]; });
+    const allergensMap = new Map((acc.allergens || []).map((a) => [a.id, a]));
+    (cur.allergens || []).forEach((a) => allergensMap.set(a.id, a));
+    return {
+      ingredients: acc.ingredients || cur.ingredients || "",
+      nutrition,
+      allergens: Array.from(allergensMap.values()),
+    };
+  }
+  return cur;
+}
+
+const NUTRITION_ROW_ID = { energyKj: 1, energyKcal: 2, fat: 3, satFat: 4, carbs: 5, sugar: 6, fiber: 7, protein: 8, salt: 9 };
 
 const EMPTY_QUAL_DATA = {
   anagrafica: {},
   contatti: {},
   certificazioni: DEFAULT_CERTIFICAZIONI.map((c) => ({ ...c })),
-  fileA: { impegni: [], allergeniPresence: {}, allergeniGestione: {}, allergeniNotes: {} },
+  fileA: { impegni: [], allergenManagementPlan: [], contaminationRiskAssessment: [] },
   fileB: {},
   fileC: [],
   signedDossier: { fileName: "", fileUrl: "" },
@@ -89,6 +127,8 @@ export default function TechnicalPage({ onLogout }) {
   const [expandedSpecId, setExpandedSpecId] = useState(null);
   const [showObsolete, setShowObsolete] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null); // { specId, docType, data }
   const [historySpec, setHistorySpec] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -213,7 +253,7 @@ export default function TechnicalPage({ onLogout }) {
 
   // --- Upload file (multipart -> server/uploads) ---
   const uploadFilesToField = async (specId, fieldName, files, importType) => {
-    if (!files.length) return;
+    if (!files.length) return [];
     const uploaded = [];
     for (const file of files) {
       // eslint-disable-next-line no-await-in-loop
@@ -232,6 +272,35 @@ export default function TechnicalPage({ onLogout }) {
       persist(qualData, next);
       return next;
     });
+    return uploaded;
+  };
+
+  // Lettura AI (Gemini) del/dei file appena caricati: propone soltanto,
+  // apre la modale di revisione — non scrive mai nulla in autonomia nella
+  // scheda. Se GEMINI_API_KEY non è configurata lato server, fallisce in
+  // silenzio (l'upload del file resta comunque riuscito e visibile).
+  const runAiExtraction = async (specId, importType, uploadedFiles) => {
+    if (!AI_DOC_TYPES.has(importType)) return;
+    const targets = uploadedFiles.filter((f) => AI_SUPPORTED_FILE_RE.test(f.url));
+    if (!targets.length) return;
+
+    setAiLoading(true);
+    try {
+      let merged = null;
+      for (const f of targets) {
+        // eslint-disable-next-line no-await-in-loop
+        const res = await api.extractDocumentData(f.url, importType, importType === "etichetta" ? globalConfig.allergeni : undefined);
+        merged = mergeExtracted(importType, merged, res.data || {});
+      }
+      if (merged) setAiSuggestion({ specId, docType: importType, data: merged });
+    } catch (err) {
+      // AI non configurata: nessun disturbo per il fornitore, è una feature opzionale.
+      if (err.code !== "AI_NOT_CONFIGURED") {
+        showAlert(`Lettura automatica del documento non riuscita: ${err.message}`);
+      }
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleMultipleFileUpload = async (specId, fieldName, event, importType) => {
@@ -252,12 +321,50 @@ export default function TechnicalPage({ onLogout }) {
           converted.push(file);
         }
       }
-      await uploadFilesToField(specId, fieldName, converted, importType);
+      const uploaded = await uploadFilesToField(specId, fieldName, converted, importType);
+      if (hasPdfLabel) setIsExtracting(false);
+      await runAiExtraction(specId, importType, uploaded);
     } catch (err) {
       showAlert(err.message || t("alertFileSize"));
     } finally {
       if (hasPdfLabel) setIsExtracting(false);
     }
+  };
+
+  // Applica i valori scelti dal fornitore nella modale di revisione AI ai
+  // campi della scheda: sono modifiche locali come qualunque altro input del
+  // form, restano da salvare esplicitamente con "Salva Specifica".
+  const applyAiSuggestion = (selected) => {
+    if (!aiSuggestion) return;
+    const { specId, docType } = aiSuggestion;
+
+    if (docType === "logistica") {
+      ["uvc", "box", "pallet"].forEach((group) => {
+        Object.entries(selected[group] || {}).forEach(([key, val]) => {
+          if (val) updateSpecField(specId, `log.${group}.${key}`, val);
+        });
+      });
+    } else if (docType === "microbiologici" || docType === "chimici") {
+      const table = docType === "microbiologici" ? "b" : "d";
+      const newRows = (selected.rows || []).map((r, i) => ({
+        id: Date.now() + i, p: r.p || "", limite: r.limite || "", risultato: r.risultato || "", conforme: r.conforme || "",
+      }));
+      if (newRows.length) {
+        setProductSpecs((prev) => prev.map((s) => (s.id === specId ? { ...s, [table]: [...s[table], ...newRows] } : s)));
+      }
+    } else if (docType === "etichetta") {
+      if (selected.ingredients) updateSpecField(specId, "a.ingredients", selected.ingredients);
+      Object.entries(selected.nutrition || {}).forEach(([key, val]) => {
+        const rowId = NUTRITION_ROW_ID[key];
+        if (val && rowId) updateSpecTable(specId, "c", rowId, "v", val);
+      });
+      (selected.allergens || []).forEach((a) => {
+        updateSpecTable(specId, "f", a.id, "presenza", a.presenza);
+      });
+    }
+
+    setAiSuggestion(null);
+    showAlert("Suggerimenti applicati alla scheda. Ricontrolla i campi evidenziati e salva quando pronto.");
   };
 
   const removeSpecFile = (specId, fieldName, idx) => {
@@ -345,6 +452,26 @@ export default function TechnicalPage({ onLogout }) {
             <p className="text-sm font-bold text-slate-500 leading-relaxed">Il sistema sta elaborando e convertendo il documento...</p>
           </div>
         </div>
+      )}
+
+      {aiLoading && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4">
+          <div className="bg-white rounded-[3rem] p-12 max-w-sm w-full shadow-2xl flex flex-col items-center justify-center text-center border-4 border-blue-100">
+            <Loader2 className="animate-spin text-blue-600 mb-8" size={80} strokeWidth={2} />
+            <h3 className="text-2xl font-black text-slate-900 mb-3 uppercase tracking-tighter">Analisi AI in corso...</h3>
+            <p className="text-sm font-bold text-slate-500 leading-relaxed">L'AI sta leggendo il documento e preparando i campi da compilare...</p>
+          </div>
+        </div>
+      )}
+
+      {aiSuggestion && (
+        <AiSuggestionsModal
+          docType={aiSuggestion.docType}
+          data={aiSuggestion.data}
+          globalConfig={globalConfig}
+          onApply={applyAiSuggestion}
+          onClose={() => setAiSuggestion(null)}
+        />
       )}
 
       {historySpec && (

@@ -3,7 +3,7 @@ import { Award, Save, Plus, UploadCloud, Download, Trash2 } from "lucide-react";
 import { useModal } from "../../hooks/useModal";
 import { api } from "../../services/api";
 
-const DEFAULT_IDS = ["ifs", "brc", "haccp", "bio", "moca"];
+const DEFAULT_IDS = ["ifs", "brc", "bio"];
 
 function getCertStatus(expiryDate) {
   if (!expiryDate) return { label: "Data mancante", color: "bg-slate-100 text-slate-500 border-slate-200" };

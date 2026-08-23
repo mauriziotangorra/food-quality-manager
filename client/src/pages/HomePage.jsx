@@ -10,7 +10,6 @@ import {
   Download,
   Trash2,
 } from "lucide-react";
-import FloatingActionButtons from "../components/FloatingActionButtons";
 import { useLanguage } from "../hooks/useLanguage";
 import { api } from "../services/api";
 
@@ -162,8 +161,6 @@ export default function HomePage({ onNavigate }) {
           ))}
         </div>
       </div>
-
-      <FloatingActionButtons />
     </div>
   );
 }

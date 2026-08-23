@@ -52,8 +52,10 @@ async function request(path, options = {}) {
   if (res.status === 401 && onUnauthorized) onUnauthorized();
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Errore API (${res.status})`);
+    const body = await res.json().catch(() => ({}));
+    const error = new Error(body.error || `Errore API (${res.status})`);
+    if (body.code) error.code = body.code;
+    throw error;
   }
 
   if (res.status === 204) return null;
@@ -78,6 +80,12 @@ export const api = {
     return request(`/api/uploads/${encodeURIComponent(scope)}`, { method: 'POST', body: form });
   },
   deleteUpload: (url) => request(`/api/uploads?path=${encodeURIComponent(url)}`, { method: 'DELETE' }),
+
+  // Lettura AI di un file già caricato (Tecnica / AP 05.1.1): estrae i campi
+  // strutturati per il pre-riempimento del form, senza scrivere nulla lato
+  // server. docType: 'logistica' | 'microbiologici' | 'chimici' | 'etichetta'.
+  extractDocumentData: (fileUrl, docType, allergens) =>
+    request('/api/ai/extract', { method: 'POST', body: JSON.stringify({ fileUrl, docType, allergens }) }),
 
   // Impostazioni globali (logo + templates)
   getSettings: () => request('/api/settings'),
