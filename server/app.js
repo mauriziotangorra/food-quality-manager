@@ -1,3 +1,9 @@
+// Carica le variabili d'ambiente da .env (JWT_SECRET, DB_*, GEMINI_API_KEY,
+// ...) prima di qualunque altro require: dotenv non sovrascrive variabili
+// già impostate nel processo, quindi su hosting che le inietta direttamente
+// (es. Railway) questa chiamata resta un no-op innocuo.
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -36,6 +42,7 @@ app.use('/api/suppliers', require('./routes/suppliers'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/qualifications', require('./routes/qualifications'));
 app.use('/api/bootstrap', require('./routes/bootstrap'));
+app.use('/api/ai', require('./routes/aiExtract'));
 
 // SPA fallback: qualsiasi rotta non gestita dalle API sopra viene servita
 // con l'index.html del frontend, così il router lato client (React Router)

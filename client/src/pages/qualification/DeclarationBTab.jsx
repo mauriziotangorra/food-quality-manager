@@ -1,62 +1,11 @@
-import React, { useState } from "react";
-import { Truck, Save, Plus, Trash2 } from "lucide-react";
-import { useModal } from "../../hooks/useModal";
-import { api } from "../../services/api";
+import React from "react";
+import { Truck, Save } from "lucide-react";
 
-export default function DeclarationBTab({ t, lang, qualData, setQualData, globalConfig, setGlobalConfig, isTestUser, saveImmediate }) {
-  const { showConfirm, showAlert } = useModal();
+export default function DeclarationBTab({ t, lang, qualData, setQualData, globalConfig, saveImmediate }) {
   const langKey = lang.toLowerCase();
-  const [savingTemplates, setSavingTemplates] = useState(false);
 
   const updateFileB = (id, checked) => {
     setQualData((prev) => ({ ...prev, fileB: { ...prev.fileB, [id]: checked } }));
-  };
-
-  // "Salva Modifiche" deve salvare tutto: sia i template globali (titoli/
-  // descrizioni, editabili dal solo utente TEST/DEMO e tenuti solo in memoria
-  // finché non si salva), sia le checkbox del fornitore (qualData.fileB),
-  // che vanno salvate tramite saveImmediate.
-  const saveTemplates = async () => {
-    setSavingTemplates(true);
-    try {
-      const qualOk = await saveImmediate(qualData);
-      if (!qualOk) return; // saveImmediate ha già mostrato l'errore
-      await api.saveSettings({ templates: globalConfig });
-      showAlert("Modifiche salvate con successo!");
-    } catch (e) {
-      showAlert(e.message || "Errore durante il salvataggio");
-    } finally {
-      setSavingTemplates(false);
-    }
-  };
-
-  const updateGlobalImpegnoB = (id, field, val) => {
-    const newArr = (globalConfig.impegniB || []).map((b) => (b.id === id ? { ...b, [field]: val } : b));
-    setGlobalConfig({ ...globalConfig, impegniB: newArr });
-  };
-
-  const addGlobalImpegnoB = () => {
-    const newArr = [
-      ...(globalConfig.impegniB || []),
-      {
-        id: Date.now().toString(),
-        title_it: "",
-        desc_it: "",
-        title_en: "",
-        desc_en: "",
-        title_fr: "",
-        desc_fr: "",
-        title_es: "",
-        desc_es: "",
-      },
-    ];
-    setGlobalConfig({ ...globalConfig, impegniB: newArr });
-  };
-
-  const removeGlobalImpegnoB = (id) => {
-    showConfirm("Eliminare questo badge logistica globalmente?", () => {
-      setGlobalConfig({ ...globalConfig, impegniB: (globalConfig.impegniB || []).filter((b) => b.id !== id) });
-    });
   };
 
   return (
@@ -74,13 +23,8 @@ export default function DeclarationBTab({ t, lang, qualData, setQualData, global
         </button>
       </div>
       <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner space-y-6">
-        <div className="flex items-center justify-between border-b-2 border-slate-200 pb-4 mb-6">
+        <div className="border-b-2 border-slate-200 pb-4 mb-6">
           <h4 className="text-2xl font-black uppercase text-slate-800">Gestione Processi e Flussi Logistici</h4>
-          {isTestUser && (
-            <button onClick={addGlobalImpegnoB} className="text-blue-600 bg-blue-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-blue-100 flex items-center gap-2">
-              <Plus size={14} /> Aggiungi Parametro
-            </button>
-          )}
         </div>
 
         {(globalConfig.impegniB || []).map((imp) => (
@@ -92,52 +36,13 @@ export default function DeclarationBTab({ t, lang, qualData, setQualData, global
               onChange={(e) => updateFileB(imp.id, e.target.checked)}
             />
             <div className="w-full">
-              {isTestUser ? (
-                <>
-                  <input
-                    className="text-lg font-black text-slate-900 block mb-2 w-full border-b border-slate-200 focus:border-blue-500 outline-none pb-1"
-                    value={imp[`title_${langKey}`] || imp.title_it || ""}
-                    onChange={(e) => updateGlobalImpegnoB(imp.id, `title_${langKey}`, e.target.value)}
-                    placeholder="Titolo parametro..."
-                  />
-                  <textarea
-                    className="text-sm font-bold text-slate-500 w-full border rounded-lg p-2 focus:border-blue-500 outline-none min-h-[60px] resize-none"
-                    value={imp[`desc_${langKey}`] || imp.desc_it || ""}
-                    onChange={(e) => updateGlobalImpegnoB(imp.id, `desc_${langKey}`, e.target.value)}
-                    placeholder="Descrizione parametro..."
-                  />
-                </>
-              ) : (
-                <>
-                  <span className="text-lg font-black text-slate-900 block mb-2">{imp[`title_${langKey}`] || imp.title_it}</span>
-                  <span className="text-sm font-bold text-slate-500 leading-relaxed block text-justify">{imp[`desc_${langKey}`] || imp.desc_it}</span>
-                </>
-              )}
+              <span className="text-lg font-black text-slate-900 block mb-2">{imp[`title_${langKey}`] || imp.title_it}</span>
+              <span className="text-sm font-bold text-slate-500 leading-relaxed block text-justify">{imp[`desc_${langKey}`] || imp.desc_it}</span>
             </div>
-            {isTestUser && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  removeGlobalImpegnoB(imp.id);
-                }}
-                className="absolute right-4 top-4 text-red-300 hover:text-red-600 bg-red-50 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
           </label>
         ))}
-        {isTestUser && (
-          <div className="flex justify-end pt-6 mt-2 border-t border-slate-200">
-            <button
-              onClick={saveTemplates}
-              disabled={savingTemplates}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
-            >
-              <Save size={16} />
-              {savingTemplates ? "Salvataggio..." : "Salva Modifiche"}
-            </button>
-          </div>
+        {(globalConfig.impegniB || []).length === 0 && (
+          <p className="text-sm font-bold text-slate-400 text-center py-6">Nessun parametro presente al momento.</p>
         )}
       </div>
     </div>

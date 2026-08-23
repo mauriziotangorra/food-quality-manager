@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { requireAuth, requireOwnerOrAdmin } = require('../middleware/auth');
+const { getQualData, saveQualData } = require('../services/qualificationService');
 
 const router = express.Router();
 
@@ -10,24 +11,23 @@ const router = express.Router();
 router.use(requireAuth);
 
 // GET /api/qualifications/:supplierId -> dati qualifica del fornitore
-// Restituisce { qualData, productSpecs, lastUpdate } (null se assenti)
+// Restituisce { qualData, productSpecs, lastUpdate } (null se assenti).
+// qualData viene dalle tabelle normalizzate; productSpecs/lastUpdate restano
+// sul vecchio blob (Fase 4, fuori scope).
 router.get('/:supplierId', requireOwnerOrAdmin, async (req, res) => {
   try {
     const { supplierId } = req.params;
-    const [rows] = await pool.query(
-      'SELECT qual_data, product_specs, last_update FROM qualifications WHERE supplier_id = ?',
-      [supplierId]
-    );
 
-    if (!rows.length) {
-      return res.json({ qualData: null, productSpecs: null, lastUpdate: null });
-    }
+    const [qualData, [rows]] = await Promise.all([
+      getQualData(supplierId),
+      pool.query('SELECT product_specs, last_update FROM qualifications WHERE supplier_id = ?', [supplierId])
+    ]);
 
     const row = rows[0];
     res.json({
-      qualData: row.qual_data ? JSON.parse(row.qual_data) : null,
-      productSpecs: row.product_specs ? JSON.parse(row.product_specs) : null,
-      lastUpdate: row.last_update ? new Date(row.last_update).toISOString() : null
+      qualData,
+      productSpecs: row?.product_specs ? JSON.parse(row.product_specs) : null,
+      lastUpdate: row?.last_update ? new Date(row.last_update).toISOString() : null
     });
   } catch (err) {
     console.error('GET /api/qualifications/:supplierId', err);
@@ -35,8 +35,11 @@ router.get('/:supplierId', requireOwnerOrAdmin, async (req, res) => {
   }
 });
 
-// PUT /api/qualifications/:supplierId -> salva (upsert) la qualifica
-// Body: { qualData, productSpecs, lastUpdate }
+// PUT /api/qualifications/:supplierId -> salva la qualifica
+// Body: { qualData, productSpecs, lastUpdate }. qualData e productSpecs sono
+// scritti indipendentemente (tabelle normalizzate vs. colonna blob invariata):
+// non serve una transazione condivisa, non toccano le stesse tabelle e non
+// c'e' un vincolo di consistenza incrociata tra i due.
 router.put('/:supplierId', requireOwnerOrAdmin, async (req, res) => {
   try {
     const { supplierId } = req.params;
@@ -45,19 +48,17 @@ router.put('/:supplierId', requireOwnerOrAdmin, async (req, res) => {
     const ts = lastUpdate ? new Date(lastUpdate) : new Date();
 
     await pool.query(
-      `INSERT INTO qualifications (supplier_id, qual_data, product_specs, last_update)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO qualifications (supplier_id, product_specs, last_update)
+       VALUES (?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         qual_data = VALUES(qual_data),
          product_specs = VALUES(product_specs),
          last_update = VALUES(last_update)`,
-      [
-        supplierId,
-        qualData ? JSON.stringify(qualData) : null,
-        productSpecs ? JSON.stringify(productSpecs) : null,
-        ts
-      ]
+      [supplierId, productSpecs ? JSON.stringify(productSpecs) : null, ts]
     );
+
+    if (qualData) {
+      await saveQualData(supplierId, qualData);
+    }
 
     res.json({ ok: true, lastUpdate: ts.toISOString() });
   } catch (err) {

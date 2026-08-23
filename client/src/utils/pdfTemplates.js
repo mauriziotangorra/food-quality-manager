@@ -177,23 +177,15 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
     <div class="section">
       <div class="title">${t('sect6')}</div>
       <table>
-        <tr><th style="width: 35%;">${t('allergen')}</th><th style="width: 25%;">${t('presImp')}</th><th style="width: 40%;">${t('gestPrev')}</th></tr>
-        ${(globalConfig.allergeni || []).map((all, i) => {
-          const langKey = lang.toLowerCase();
-          const presenceRaw = typeof qualData.fileA?.allergeniPresence?.[i] === 'boolean'
-            ? (qualData.fileA.allergeniPresence[i] ? 'Presente' : 'Assente')
-            : (qualData.fileA?.allergeniPresence?.[i] || 'Assente');
-          const gestione = qualData.fileA?.allergeniGestione?.[i] || '';
-          const note = qualData.fileA?.allergeniNotes?.[i] || '';
-          const detail = [gestione, note].filter(Boolean).join(' - ');
-          return `
-            <tr>
-              <td><b>${all?.[langKey] || all?.it || ''}</b></td>
-              <td>${presenceRaw}</td>
-              <td>${detail || '-'}</td>
-            </tr>
-          `;
-        }).join('')}
+        <tr><th style="width:60%">${t('docType')}</th><th style="width:40%">${t('attState')}</th></tr>
+        <tr>
+          <td><b>${t('allergenMgmtPlan')}</b></td>
+          <td>${(qualData.fileA?.allergenManagementPlan || []).length ? t('loaded') : t('missing')}</td>
+        </tr>
+        <tr>
+          <td><b>${t('contaminationRiskAssessment')}</b></td>
+          <td>${(qualData.fileA?.contaminationRiskAssessment || []).length ? t('loaded') : t('missing')}</td>
+        </tr>
       </table>
     </div>
 

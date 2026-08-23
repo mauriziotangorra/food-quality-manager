@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db');
+const { getGlobalSettings } = require('../services/settingsService');
 
 const router = express.Router();
 
@@ -11,15 +12,7 @@ router.get('/', async (req, res) => {
       'SELECT id, name, status, created_at FROM suppliers ORDER BY name ASC'
     );
 
-    const [settingRows] = await pool.query('SELECT setting_value FROM settings WHERE setting_key = ?', ['global']);
-    let settings = { logo: null, templates: null };
-    if (settingRows.length && settingRows[0].setting_value) {
-      try {
-        settings = JSON.parse(settingRows[0].setting_value);
-      } catch (e) {
-        settings = { logo: null, templates: null };
-      }
-    }
+    const settings = await getGlobalSettings();
 
     res.json({ suppliers, settings });
   } catch (err) {

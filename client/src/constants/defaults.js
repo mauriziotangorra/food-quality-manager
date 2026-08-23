@@ -45,7 +45,5 @@ export const DEFAULT_IMPEGNI_B = [
 export const DEFAULT_CERTIFICAZIONI = [
   { id: 'ifs', type: 'IFS Food', fileName: '', fileUrl: '', expiry: '' },
   { id: 'brc', type: 'BRCGS Food', fileName: '', fileUrl: '', expiry: '' },
-  { id: 'haccp', type: 'Manuale / Piano HACCP', fileName: '', fileUrl: '', expiry: '' },
-  { id: 'bio', type: 'Certificazione Biologica', fileName: '', fileUrl: '', expiry: '' },
-  { id: 'moca', type: 'Certificazione MOCA (Materiali a contatto con alimenti)', fileName: '', fileUrl: '', expiry: '' }
+  { id: 'bio', type: 'Certificazione Biologica', fileName: '', fileUrl: '', expiry: '' }
 ];

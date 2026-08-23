@@ -13,5 +13,24 @@ const pool = mysql.createPool({
   charset: 'utf8mb4'
 });
 
+// Esegue fn(conn) dentro una transazione: commit se fn risolve, rollback se
+// lancia. Aggiunta come proprietà del pool (invece di cambiare la forma
+// dell'export) così tutte le route esistenti che fanno `pool.query(...)`
+// restano invariate.
+pool.withTransaction = async function withTransaction(fn) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
 module.exports = pool;
 
