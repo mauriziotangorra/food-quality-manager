@@ -4,8 +4,8 @@ import { useModal } from "../../hooks/useModal";
 import { api } from "../../services/api";
 
 const DOC_SLOTS = [
-  { key: "allergenManagementPlan", label: "Piano di Gestione degli Allergeni" },
-  { key: "contaminationRiskAssessment", label: "Valutazione del Rischio di Contaminazione" },
+  { key: "allergenManagementPlan", labelKey: "allergenMgmtPlan" },
+  { key: "contaminationRiskAssessment", labelKey: "contaminationRiskAssessment" },
 ];
 
 export default function DeclarationATab({ t, lang, qualData, setQualData, globalConfig, supplierId, saveImmediate }) {
@@ -59,7 +59,10 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
           <h3 className="text-5xl font-black uppercase tracking-tighter text-slate-900">{t("tabDichiarazioneA")}</h3>
         </div>
         <button
-          onClick={() => saveImmediate(qualData)}
+          onClick={async () => {
+            const ok = await saveImmediate(qualData);
+            if (ok) showAlert(t("alertSaved"));
+          }}
           className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
         >
           <Save size={16} /> {t("save")}
@@ -68,7 +71,7 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
 
       <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner">
         <div className="border-b-2 border-slate-200 pb-4 mb-8">
-          <h4 className="text-2xl font-black uppercase text-slate-800">Dichiarazioni OGM, Etichettatura e Impegni Integrali</h4>
+          <h4 className="text-2xl font-black uppercase text-slate-800">{t("declAOgmTitle")}</h4>
         </div>
         <div className="space-y-6">
           {(globalConfig.impegniA || []).map((imp, idx) => {
@@ -90,14 +93,14 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
 
       <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner space-y-8">
         <div className="border-b-2 border-slate-200 pb-4">
-          <h4 className="text-2xl font-black uppercase text-slate-800">Gestione Allergeni e Rischio di Contaminazione</h4>
+          <h4 className="text-2xl font-black uppercase text-slate-800">{t("allergenMgmtSectionTitle")}</h4>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {DOC_SLOTS.map((slot) => {
             const files = Array.isArray(qualData.fileA[slot.key]) ? qualData.fileA[slot.key] : [];
             return (
               <div key={slot.key} className="bg-white p-6 rounded-2xl border border-slate-100 space-y-3">
-                <label className="text-[10px] font-black uppercase text-slate-500 block">{slot.label}</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 block">{t(slot.labelKey)}</label>
                 {files.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {files.map((f) => (
@@ -113,10 +116,10 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
                     ))}
                   </div>
                 )}
-                {files.length === 0 && <p className="text-xs text-slate-400 font-bold">Nessun file caricato</p>}
+                {files.length === 0 && <p className="text-xs text-slate-400 font-bold">{t("noFileUploaded")}</p>}
                 <div className="relative overflow-hidden inline-block">
                   <button className="bg-slate-900 text-white rounded-xl px-5 py-2.5 font-black text-[11px] uppercase hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 pointer-events-none">
-                    <UploadCloud size={15} /> Carica File
+                    <UploadCloud size={15} /> {t("uploadFileBtn")}
                   </button>
                   <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(slot.key, e)} />
                 </div>

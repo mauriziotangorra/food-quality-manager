@@ -194,6 +194,9 @@ CREATE TABLE IF NOT EXISTS qual_prodotti (
   CONSTRAINT fk_qp_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- DEPRECATED: la tab "Documentazione Qualifica" e' stata rimossa dal
+-- pannello di qualifica. Tabelle non piu' lette ne' scritte dall'app;
+-- mantenute solo come snapshot storico, non droppare.
 CREATE TABLE IF NOT EXISTS qual_qualification_docs (
   supplier_id VARCHAR(64) NOT NULL,
   id VARCHAR(64) NOT NULL,

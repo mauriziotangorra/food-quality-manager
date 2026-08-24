@@ -5,15 +5,15 @@ import { api } from "../../services/api";
 
 const DEFAULT_IDS = ["ifs", "brc", "bio"];
 
-function getCertStatus(expiryDate) {
-  if (!expiryDate) return { label: "Data mancante", color: "bg-slate-100 text-slate-500 border-slate-200" };
+function getCertStatus(expiryDate, t) {
+  if (!expiryDate) return { label: t("certStatusMissingDate"), color: "bg-slate-100 text-slate-500 border-slate-200" };
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const exp = new Date(expiryDate);
   const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return { label: "SCADUTA", color: "bg-red-100 text-red-700 border-red-300" };
-  if (diffDays <= 30) return { label: "IN SCADENZA", color: "bg-orange-100 text-orange-700 border-orange-300" };
-  return { label: "VALIDA", color: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+  if (diffDays < 0) return { label: t("certStatusExpired"), color: "bg-red-100 text-red-700 border-red-300" };
+  if (diffDays <= 30) return { label: t("certStatusExpiring"), color: "bg-orange-100 text-orange-700 border-orange-300" };
+  return { label: t("certStatusValid"), color: "bg-emerald-100 text-emerald-700 border-emerald-300" };
 }
 
 export default function CertificazioniTab({ t, qualData, setQualData, supplierId, saveImmediate }) {
@@ -89,14 +89,14 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
             onClick={addCert}
             className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
           >
-            <Plus size={16} /> Aggiungi Certificazione
+            <Plus size={16} /> {t("addCertification")}
           </button>
         </div>
       </div>
 
       <div className="space-y-6 text-slate-900">
         {qualData.certificazioni.map((cert) => {
-          const status = getCertStatus(cert.expiry);
+          const status = getCertStatus(cert.expiry, t);
           return (
             <div key={cert.id} className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-inner relative">
               <div className="flex-1 w-full">
@@ -105,13 +105,13 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
                     className="text-2xl font-black uppercase text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-full md:w-auto"
                     value={cert.type}
                     onChange={(e) => updateCert(cert.id, "type", e.target.value)}
-                    placeholder="Nome Certificazione"
+                    placeholder={t("certNamePlaceholder")}
                   />
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${status.color}`}>{status.label}</span>
                 </div>
                 {cert.fileUrl ? (
                   <div className="flex items-center gap-3 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 inline-flex mt-2">
-                    <p className="text-xs text-blue-600 font-bold max-w-[250px] truncate" title={cert.fileName}>File: {cert.fileName}</p>
+                    <p className="text-xs text-blue-600 font-bold max-w-[250px] truncate" title={cert.fileName}>{cert.fileName}</p>
                     <div className="flex items-center gap-1 border-l border-blue-200 pl-3 ml-1">
                       <a href={cert.fileUrl} download={cert.fileName} className="text-blue-600 hover:text-emerald-600 bg-white p-1.5 rounded-lg shadow-sm transition-all">
                         <Download size={14} />
@@ -122,12 +122,12 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 font-bold mt-2">Nessun file PDF caricato</p>
+                  <p className="text-xs text-slate-400 font-bold mt-2">{t("noCertFile")}</p>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
                 <div className="space-y-1 w-full md:w-auto">
-                  <label className="text-[10px] font-black uppercase text-slate-500">Data di Scadenza</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500">{t("expiryLabel")}</label>
                   <input
                     type="date"
                     className="p-3 w-full rounded-xl shadow-sm border-none font-bold text-sm bg-white outline-none focus:ring-2 ring-blue-500"
@@ -137,7 +137,7 @@ export default function CertificazioniTab({ t, qualData, setQualData, supplierId
                 </div>
                 <div className="relative overflow-hidden inline-block w-full md:w-auto mt-4 md:mt-0">
                   <button className="w-full bg-slate-900 text-white rounded-xl px-6 py-3 font-black text-xs uppercase hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 pointer-events-none">
-                    <UploadCloud size={16} /> Carica PDF
+                    <UploadCloud size={16} /> {t("uploadPdfBtn")}
                   </button>
                   <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(cert.id, e)} />
                 </div>

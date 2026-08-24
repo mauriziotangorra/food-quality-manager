@@ -4,7 +4,14 @@ import { useModal } from "../../hooks/useModal";
 import { api } from "../../services/api";
 import { getRawMaterialIssues, checkRawMaterialsCompleteness } from "../../utils/completenessCheck";
 
-const FREQUENCY_OPTIONS = ["Per Lotto", "Mensile", "Trimestrale", "Semestrale", "Annuale", "Altro"];
+const FREQUENCY_OPTIONS = [
+  { value: "Per Lotto", labelKey: "freqPerLotto" },
+  { value: "Mensile", labelKey: "freqMensile" },
+  { value: "Trimestrale", labelKey: "freqTrimestrale" },
+  { value: "Semestrale", labelKey: "freqSemestrale" },
+  { value: "Annuale", labelKey: "freqAnnuale" },
+  { value: "Altro", labelKey: "freqAltro" },
+];
 
 export default function RawMaterialsTab({ t, qualData, setQualData, supplierId, saveImmediate }) {
   const { showAlert, showConfirm } = useModal();
@@ -124,7 +131,7 @@ export default function RawMaterialsTab({ t, qualData, setQualData, supplierId, 
             onClick={addMaterial}
             className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
           >
-            <Plus size={16} /> Aggiungi Materia Prima
+            <Plus size={16} /> {t("addRawMaterial")}
           </button>
         </div>
       </div>
@@ -139,7 +146,7 @@ export default function RawMaterialsTab({ t, qualData, setQualData, supplierId, 
                 className="text-2xl font-black uppercase text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-full"
                 value={m.name}
                 onChange={(e) => updateMaterial(m.id, "name", e.target.value)}
-                placeholder="Nome Materia Prima"
+                placeholder={t("rawMaterialNamePlaceholder")}
               />
               <button onClick={() => removeMaterial(m.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
                 <Trash2 size={20} />
@@ -149,53 +156,53 @@ export default function RawMaterialsTab({ t, qualData, setQualData, supplierId, 
             {issues.length > 0 && (
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl p-4">
                 <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs font-bold text-amber-800">Documentazione incompleta: {issues.join(", ")}.</p>
+                <p className="text-xs font-bold text-amber-800">{t("docIncompletePrefix")}: {issues.join(", ")}.</p>
               </div>
             )}
 
             <div className="space-y-1 max-w-xs">
-              <label className="text-[10px] font-black uppercase text-slate-500">Frequenza delle Analisi</label>
+              <label className="text-[10px] font-black uppercase text-slate-500">{t("analysisFrequencyLabel")}</label>
               <select
                 className="p-3 w-full rounded-xl shadow-sm border-none font-bold text-sm bg-white outline-none focus:ring-2 ring-blue-500"
                 value={m.frequency}
                 onChange={(e) => updateMaterial(m.id, "frequency", e.target.value)}
               >
-                <option value="">Seleziona...</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {FREQUENCY_OPTIONS.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f.value} value={f.value}>{t(f.labelKey)}</option>
                 ))}
               </select>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white p-5 rounded-2xl border border-slate-100">
-                <label className="text-[10px] font-black uppercase text-slate-500 block mb-3">Scheda Tecnica Materia Prima</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-3">{t("technicalSheetLabel")}</label>
                 {m.technicalSheet ? (
                   <FileChips files={[m.technicalSheet]} onRemove={() => removeTechnicalSheet(m.id)} />
                 ) : (
-                  <p className="text-xs text-slate-400 font-bold mb-3">Nessun file caricato</p>
+                  <p className="text-xs text-slate-400 font-bold mb-3">{t("noFileUploaded")}</p>
                 )}
-                {!m.technicalSheet && <UploadButton label="Carica File" onChange={(e) => handleUpload(m.id, "technicalSheet", e)} multiple={false} />}
+                {!m.technicalSheet && <UploadButton label={t("uploadFileBtn")} onChange={(e) => handleUpload(m.id, "technicalSheet", e)} multiple={false} />}
               </div>
 
               <div className="bg-white p-5 rounded-2xl border border-slate-100">
-                <label className="text-[10px] font-black uppercase text-slate-500 block mb-3">Analisi / Rapporti di Prova</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-3">{t("analysisReportsLabel")}</label>
                 <FileChips files={m.analysisReports} onRemove={(url) => removeListFile(m.id, "analysisReports", url)} />
-                <UploadButton label="Carica File" onChange={(e) => handleUpload(m.id, "analysisReports", e)} multiple />
+                <UploadButton label={t("uploadFileBtn")} onChange={(e) => handleUpload(m.id, "analysisReports", e)} multiple />
               </div>
 
               <div className="bg-white p-5 rounded-2xl border border-slate-100">
-                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Gestione e Valutazione del Rischio</label>
-                <p className="text-[10px] font-bold text-slate-400 mb-3">Se la gestione o la valutazione del rischio differisce, carica più file.</p>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">{t("riskMgmtLabel")}</label>
+                <p className="text-[10px] font-bold text-slate-400 mb-3">{t("riskMgmtHint")}</p>
                 <FileChips files={m.riskAssessment} onRemove={(url) => removeListFile(m.id, "riskAssessment", url)} />
-                <UploadButton label="Carica File" onChange={(e) => handleUpload(m.id, "riskAssessment", e)} multiple />
+                <UploadButton label={t("uploadFileBtn")} onChange={(e) => handleUpload(m.id, "riskAssessment", e)} multiple />
               </div>
             </div>
           </div>
           );
         })}
         {materials.length === 0 && (
-          <p className="text-sm font-bold text-slate-400 text-center py-10">Nessuna materia prima presente. Usa &quot;Aggiungi Materia Prima&quot; per iniziare.</p>
+          <p className="text-sm font-bold text-slate-400 text-center py-10">{t("noRawMaterialsHint")}</p>
         )}
       </div>
     </div>

@@ -6,28 +6,15 @@ import { getHaccpSlotIssues, checkHaccpCompleteness } from "../../utils/complete
 
 const EMPTY_HACCP = { manualExtract: [], flowChart: [], prp: [], oprpCcp: [] };
 
-const SLOTS = [
-  {
-    key: "manualExtract",
-    label: "Estratto Manuale HACCP",
-    desc: "Caricamento multiplo dell'estratto del manuale o delle parti pertinenti ai prodotti forniti a IFP.",
-  },
-  {
-    key: "flowChart",
-    label: "Diagramma di Flusso del Processo Produttivo",
-    desc: "Caricamento multiplo del diagramma di flusso del processo produttivo.",
-  },
-  {
-    key: "prp",
-    label: "PRP (Prerequisiti)",
-    desc: "Caricamento multiplo dei prerequisiti applicabili.",
-  },
-  {
-    key: "oprpCcp",
-    label: "OPRP / CCP / Misure di Controllo",
-    desc: "Caricamento multiplo della documentazione relativa alle misure di controllo previste dal sistema HACCP del fornitore.",
-  },
-];
+const MANUAL_EXTRACT = { key: "manualExtract", labelKey: "haccpManualExtractLabel", descKey: "haccpManualExtractDesc" };
+const FLOW_CHART = { key: "flowChart", labelKey: "haccpFlowChartLabel", descKey: "haccpFlowChartDesc" };
+const PRP = { key: "prp", labelKey: "haccpPrpLabel", descKey: "haccpPrpDesc" };
+const OPRP_CCP = { key: "oprpCcp", labelKey: "haccpOprpLabel", descKey: "haccpOprpDesc" };
+
+// PRP e OPRP/CCP condividono la stessa card (richiesto dal cliente: "questi
+// due possono stare nello stesso box"), separati da un divisore interno.
+// Estratto manuale e diagramma di flusso restano ciascuno nella propria card.
+const CARDS = [[MANUAL_EXTRACT], [FLOW_CHART], [PRP, OPRP_CCP]];
 
 export default function HaccpTab({ t, qualData, setQualData, supplierId, saveImmediate }) {
   const { showAlert, showConfirm } = useModal();
@@ -89,65 +76,71 @@ export default function HaccpTab({ t, qualData, setQualData, supplierId, saveImm
 
       <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-2xl p-5">
         <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
-        <p className="text-xs font-bold text-blue-800 leading-relaxed">
-          Se HACCP, diagrammi di flusso, PRP o misure di controllo variano tra i prodotti commercializzati con IFP, carica i documenti
-          pertinenti e indica sotto ciascun file il prodotto o la famiglia di prodotto a cui si riferiscono (es. "Biscotti" o "Biscotto al
-          cioccolato"). Se più prodotti condividono lo stesso documento, è sufficiente un unico caricamento indicando la famiglia interessata.
-        </p>
+        <p className="text-xs font-bold text-blue-800 leading-relaxed">{t("haccpInfoHint")}</p>
       </div>
 
       <div className="space-y-8">
-        {SLOTS.map((slot) => {
-          const files = haccp[slot.key] || [];
-          const issues = getHaccpSlotIssues(files);
+        {CARDS.map((slots) => {
+          const cardHasIssues = slots.some((slot) => getHaccpSlotIssues(haccp[slot.key] || []).length > 0);
           return (
-            <div key={slot.key} className={`bg-slate-50 p-10 rounded-[3rem] border shadow-inner space-y-6 ${issues.length ? "border-amber-400" : "border-slate-200"}`}>
-              <div className="border-b-2 border-slate-200 pb-4">
-                <h4 className="text-2xl font-black uppercase text-slate-800">{slot.label}</h4>
-                <p className="text-xs font-bold text-slate-400 mt-2">{slot.desc}</p>
-              </div>
-
-              {issues.length > 0 && (
-                <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl p-4">
-                  <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-xs font-bold text-amber-800">Documentazione incompleta: {issues.join(", ")}.</p>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                {files.map((f) => (
-                  <div key={f.url} className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col md:flex-row md:items-center gap-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 font-bold truncate" title={f.name}>{f.name}</p>
-                      <a href={f.url} download={f.name} className="text-blue-600 hover:text-emerald-600 bg-blue-50 p-1.5 rounded-lg shadow-sm transition-all shrink-0">
-                        <Download size={13} />
-                      </a>
-                      <button onClick={() => removeFile(slot.key, f.url)} className="text-slate-400 hover:text-red-600 bg-slate-50 p-1.5 rounded-lg shadow-sm transition-all shrink-0">
-                        <X size={13} />
-                      </button>
+            <div
+              key={slots.map((s) => s.key).join("+")}
+              className={`bg-slate-50 p-10 rounded-[3rem] border shadow-inner space-y-6 ${cardHasIssues ? "border-amber-400" : "border-slate-200"}`}
+            >
+              {slots.map((slot, idx) => {
+                const files = haccp[slot.key] || [];
+                const issues = getHaccpSlotIssues(files);
+                return (
+                  <div key={slot.key} className={`space-y-6 ${idx > 0 ? "pt-6 border-t border-slate-200" : ""}`}>
+                    <div className="border-b-2 border-slate-200 pb-4">
+                      <h4 className="text-2xl font-black uppercase text-slate-800">{t(slot.labelKey)}</h4>
+                      <p className="text-xs font-bold text-slate-400 mt-2">{t(slot.descKey)}</p>
                     </div>
-                    <div className="flex items-center gap-2 md:w-80 shrink-0">
-                      <label className="text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">
-                        Applicabile a{!f.appliesTo && <span className="text-red-500"> *</span>}
-                      </label>
-                      <input
-                        className={`flex-1 p-2 rounded-lg text-xs font-bold bg-white outline-none focus:ring-2 ring-blue-500 border ${!f.appliesTo ? "border-red-400" : "border-slate-200"}`}
-                        value={f.appliesTo || ""}
-                        onChange={(e) => updateAppliesTo(slot.key, f.url, e.target.value)}
-                        placeholder="Es. Biscotti, Biscotto al cioccolato..."
-                      />
+
+                    {issues.length > 0 && (
+                      <div className="flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-2xl p-4">
+                        <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-xs font-bold text-amber-800">{t("docIncompletePrefix")}: {issues.join(", ")}.</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      {files.map((f) => (
+                        <div key={f.url} className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col md:flex-row md:items-center gap-3">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <p className="text-xs text-slate-700 font-bold truncate" title={f.name}>{f.name}</p>
+                            <a href={f.url} download={f.name} className="text-blue-600 hover:text-emerald-600 bg-blue-50 p-1.5 rounded-lg shadow-sm transition-all shrink-0">
+                              <Download size={13} />
+                            </a>
+                            <button onClick={() => removeFile(slot.key, f.url)} className="text-slate-400 hover:text-red-600 bg-slate-50 p-1.5 rounded-lg shadow-sm transition-all shrink-0">
+                              <X size={13} />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 md:w-80 shrink-0">
+                            <label className="text-[10px] font-black uppercase text-slate-500 whitespace-nowrap">
+                              {t("appliesTo")}{!f.appliesTo && <span className="text-red-500"> {t("appliesToRequired")}</span>}
+                            </label>
+                            <input
+                              className={`flex-1 p-2 rounded-lg text-xs font-bold bg-white outline-none focus:ring-2 ring-blue-500 border ${!f.appliesTo ? "border-red-400" : "border-slate-200"}`}
+                              value={f.appliesTo || ""}
+                              onChange={(e) => updateAppliesTo(slot.key, f.url, e.target.value)}
+                              placeholder={t("appliesToApplyPlaceholder")}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {files.length === 0 && <p className="text-xs text-slate-400 font-bold">{t("noFileUploaded")}</p>}
+                    </div>
+
+                    <div className="relative overflow-hidden inline-block">
+                      <button className="bg-slate-900 text-white rounded-xl px-6 py-3 font-black text-xs uppercase hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 pointer-events-none">
+                        <UploadCloud size={16} /> {t("uploadFileBtn")}
+                      </button>
+                      <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(slot.key, e)} />
                     </div>
                   </div>
-                ))}
-                {files.length === 0 && <p className="text-xs text-slate-400 font-bold">Nessun file caricato</p>}
-              </div>
-
-              <div className="relative overflow-hidden inline-block">
-                <button className="bg-slate-900 text-white rounded-xl px-6 py-3 font-black text-xs uppercase hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 pointer-events-none">
-                  <UploadCloud size={16} /> Carica File
-                </button>
-                <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(slot.key, e)} />
-              </div>
+                );
+              })}
             </div>
           );
         })}

@@ -1,9 +1,9 @@
-// Controllo di completezza obbligatorio per le sezioni "nuove" (Documentazione
-// Qualifica, Materie Prime, Food Fraud/Food Defense, HACCP/Autocontrollo):
-// ognuna richiede documenti allegati, e per Food Fraud/Defense e HACCP il
-// campo "Applicabile a" è obbligatorio non appena c'è almeno un file.
+// Controllo di completezza obbligatorio per le sezioni "nuove" (Materie
+// Prime, Food Fraud/Food Defense, HACCP/Autocontrollo): ognuna richiede
+// documenti allegati, e per Food Fraud/Defense e HACCP il campo
+// "Applicabile a" è obbligatorio non appena c'è almeno un file.
 //
-// Il blocco si applica SOLO al pulsante "Save" di ciascuna di queste 4 tab —
+// Il blocco si applica SOLO al pulsante "Save" di ciascuna di queste tab —
 // non al salvataggio condiviso (QualificationPage), altrimenti un fornitore
 // non potrebbe salvare nemmeno una modifica ad Anagrafica finché Food Fraud/
 // Defense (una sezione fissa, incompleta di default per ogni fornitore) non
@@ -19,13 +19,6 @@ export function getRawMaterialIssues(material) {
   if (!material.analysisReports || material.analysisReports.length === 0) issues.push('analisi/rapporti di prova mancanti');
   if (!material.riskAssessment || material.riskAssessment.length === 0) issues.push('gestione e valutazione del rischio mancante');
   if (!material.frequency) issues.push('frequenza delle analisi mancante');
-  return issues;
-}
-
-export function getQualificationDocIssues(doc) {
-  const issues = [];
-  if (!doc.name) issues.push('nome mancante');
-  if (!doc.files || doc.files.length === 0) issues.push('nessun file caricato');
   return issues;
 }
 
@@ -62,15 +55,6 @@ export function checkRawMaterialsCompleteness(qualData) {
   (qualData.rawMaterials || []).forEach((m, idx) => {
     const issues = getRawMaterialIssues(m);
     if (issues.length) lines.push(`"${m.name || `Materia Prima #${idx + 1}`}": ${issues.join(', ')}.`);
-  });
-  return buildResult(lines);
-}
-
-export function checkQualificationDocsCompleteness(qualData) {
-  const lines = [];
-  (qualData.qualificationDocs || []).forEach((d, idx) => {
-    const issues = getQualificationDocIssues(d);
-    if (issues.length) lines.push(`"${d.name || `Documento #${idx + 1}`}": ${issues.join(', ')}.`);
   });
   return buildResult(lines);
 }

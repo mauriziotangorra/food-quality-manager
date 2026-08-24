@@ -2,22 +2,13 @@ import React from "react";
 import {
   ChevronDown, ChevronUp, Trash2, Save, Edit3, FileClock, History, Download, Printer,
   FileUp, Truck, Microscope, FlaskRound, Image as ImageIcon, ShoppingBag, Scale, Apple,
-  UtensilsCrossed, AlertCircle, Dna, Package, FileText, Check, UploadCloud,
+  UtensilsCrossed, AlertCircle, Dna, Package, Check, Info,
 } from "lucide-react";
-
-const DOC_TYPES = [
-  { key: "moca", labelKey: "moca" },
-  { key: "haccp", labelKey: "haccp" },
-  { key: "packSheet", labelKey: "packSheet" },
-  { key: "bio", labelKey: "bio" },
-  { key: "shelfLife", labelKey: "shelfLife" },
-];
 
 export default function SpecEditor({
   spec, isExpanded, onToggleExpand, t, lang, globalConfig, isTestUser,
   onUpdateField, onUpdateTable, onAddTableRow, onDelete, onSave, onToggleEdit, onRevise,
   onShowHistory, onExportAll, onExportPdf, onFilesUpload, onRemoveFile, onBrandLogoUpload,
-  onSpecDocUpload, onRemoveSpecDoc,
 }) {
   const disabled = spec.isSaved;
   const langKey = lang.toLowerCase();
@@ -146,7 +137,6 @@ export default function SpecEditor({
               <SectionF t={t} lang={langKey} spec={spec} disabled={disabled} globalConfig={globalConfig} onUpdateTable={onUpdateTable} />
               <SectionG t={t} spec={spec} disabled={disabled} onUpdateField={onUpdateField} />
               <SectionH t={t} spec={spec} disabled={disabled} onUpdateField={onUpdateField} />
-              <SectionDocs t={t} spec={spec} disabled={disabled} onSpecDocUpload={onSpecDocUpload} onRemoveSpecDoc={onRemoveSpecDoc} />
             </div>
           </div>
         </div>
@@ -212,22 +202,25 @@ function SectionA({ t, spec, disabled, onUpdateField, onBrandLogoUpload }) {
         <input disabled={disabled} placeholder={t("legalName")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.legalName || ""} onChange={f("a.legalName")} />
         <input disabled={disabled} placeholder={t("claim")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.claim || ""} onChange={f("a.claim")} />
         <textarea disabled={disabled} placeholder={t("ingredients")} className="w-full p-3 bg-white rounded-xl text-xs font-bold h-24 border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.ingredients || ""} onChange={f("a.ingredients")} />
-        <div className="grid grid-cols-2 gap-4">
-          <input disabled={disabled} placeholder={t("tmc")} className="p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.tmc || ""} onChange={f("a.tmc")} />
-          <input disabled={disabled} placeholder={t("tmcFormat")} className="p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.tmcFormat || ""} onChange={f("a.tmcFormat")} />
+        <textarea disabled={disabled} placeholder={t("allergensNote")} className="w-full p-3 bg-white rounded-xl text-xs font-bold h-16 border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.allergensNote || ""} onChange={f("a.allergensNote")} />
+        <input disabled={disabled} placeholder={t("tmc")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.tmc || ""} onChange={f("a.tmc")} />
+        <input disabled={disabled} placeholder={t("producedIn")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.producedIn || ""} onChange={f("a.producedIn")} />
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 px-1">
+            <Info size={13} className="text-red-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase text-red-500">{t("manualFillHint")}</span>
+          </div>
+          <textarea disabled={disabled} placeholder={t("batchDecode")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm h-20 disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.batchDecode || ""} onChange={f("a.batchDecode")} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <input disabled={disabled} placeholder={t("supplier")} className="p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.supplier || ""} onChange={f("a.supplier")} />
-          <input disabled={disabled} placeholder={t("producedIn")} className="p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.producedIn || ""} onChange={f("a.producedIn")} />
-        </div>
-        <input disabled={disabled} placeholder={t("packaging")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.packaging || ""} onChange={f("a.packaging")} />
-        <input disabled={disabled} placeholder={t("batchFormat")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.batchFormat || ""} onChange={f("a.batchFormat")} />
-        <textarea disabled={disabled} placeholder={t("batchDecode")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm h-20 disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.batchDecode || ""} onChange={f("a.batchDecode")} />
-        <input disabled={disabled} placeholder={t("prepMode")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.prepMode || ""} onChange={f("a.prepMode")} />
         <input disabled={disabled} placeholder={t("intendedUse")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.intendedUse || ""} onChange={f("a.intendedUse")} />
         <input disabled={disabled} placeholder={t("storage")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.storage || ""} onChange={f("a.storage")} />
-        <textarea disabled={disabled} placeholder={t("processDesc")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100 h-20" value={spec.a?.processDesc || ""} onChange={f("a.processDesc")} />
-        <textarea disabled={disabled} placeholder={t("envLabel")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100 h-20" value={spec.a?.envLabel || ""} onChange={f("a.envLabel")} />
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 px-1">
+            <Info size={13} className="text-red-500 shrink-0" />
+            <span className="text-[9px] font-black uppercase text-red-500">{t("manualFillHint")}</span>
+          </div>
+          <textarea disabled={disabled} placeholder={t("envLabel")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100 h-20" value={spec.a?.envLabel || ""} onChange={f("a.envLabel")} />
+        </div>
         <input disabled={disabled} placeholder={t("packMode")} className="w-full p-3 bg-white rounded-xl text-xs font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.a?.packMode || ""} onChange={f("a.packMode")} />
       </div>
     </div>
@@ -466,46 +459,6 @@ function SectionH({ t, spec, disabled, onUpdateField }) {
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
-
-function SectionDocs({ t, spec, disabled, onSpecDocUpload, onRemoveSpecDoc }) {
-  return (
-    <div className="bg-slate-50 p-8 rounded-[3rem] border border-blue-100 shadow-inner space-y-6">
-      <div className="flex items-center gap-4 border-b-2 border-blue-200 pb-2 text-blue-700 font-black uppercase text-xs"><FileText size={24} /> {t("specDocsTitle")}</div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {DOC_TYPES.map((docType) => {
-          const file = spec.specDocs?.[docType.key];
-          return (
-            <div key={docType.key} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-start justify-between gap-3">
-              <span className="text-[10px] font-black uppercase text-slate-500">{t(docType.labelKey)}</span>
-              {file ? (
-                <div className="w-full flex items-center justify-between gap-2 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                  <span className="text-xs text-blue-600 font-bold max-w-[150px] truncate" title={file.name}>{file.name}</span>
-                  <div className="flex items-center gap-3">
-                    <a href={file.url} download={file.name} className="text-blue-600 hover:text-emerald-600 transition-colors">
-                      <Download size={18} />
-                    </a>
-                    {!disabled && (
-                      <button onClick={() => onRemoveSpecDoc(docType.key)} className="text-slate-400 hover:text-red-500 transition-colors">
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="relative w-full">
-                  <button disabled={disabled} className="w-full bg-slate-50 text-slate-500 py-3 rounded-xl text-[10px] font-black uppercase border border-dashed border-slate-300 hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-none">
-                    <UploadCloud size={16} /> Carica PDF
-                  </button>
-                  {!disabled && <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => onSpecDocUpload(docType.key, e)} />}
-                </div>
-              )}
-            </div>
-          );
-        })}
       </div>
     </div>
   );

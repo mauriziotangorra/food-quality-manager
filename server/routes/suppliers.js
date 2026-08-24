@@ -20,6 +20,21 @@ const mapRow = (r) => ({
 // Tutte le route sono riservate agli amministratori.
 router.use(requireAuth, requireAdmin);
 
+// Le password sono hash bcrypt con salt casuale per riga: non è possibile
+// verificarne l'unicità con un confronto SQL diretto, quindi la password in
+// chiaro va confrontata (bcrypt.compare) contro ogni hash esistente.
+// excludeId esclude il fornitore che si sta modificando, altrimenti la sua
+// stessa password invariata risulterebbe sempre "già in uso".
+async function isPasswordInUse(password, excludeId) {
+  const [rows] = excludeId
+    ? await pool.query('SELECT qual_pass, tech_pass FROM suppliers WHERE id != ?', [excludeId])
+    : await pool.query('SELECT qual_pass, tech_pass FROM suppliers');
+
+  const hashes = rows.flatMap((r) => [r.qual_pass, r.tech_pass]).filter(Boolean);
+  const matches = await Promise.all(hashes.map((hash) => bcrypt.compare(password, hash)));
+  return matches.some(Boolean);
+}
+
 // GET /api/suppliers -> elenco fornitori (senza password)
 router.get('/', async (req, res) => {
   try {
@@ -40,6 +55,13 @@ router.post('/', async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Il nome del fornitore è obbligatorio' });
     if (!qualPass || !techPass) {
       return res.status(400).json({ error: 'Password di qualifica e tecnica sono obbligatorie' });
+    }
+
+    if (await isPasswordInUse(qualPass, null)) {
+      return res.status(409).json({ error: 'Questa password di qualifica è già utilizzata da un altro fornitore. Scegline una diversa.' });
+    }
+    if (await isPasswordInUse(techPass, null)) {
+      return res.status(409).json({ error: 'Questa password tecnica è già utilizzata da un altro fornitore. Scegline una diversa.' });
     }
 
     const supplierId = id || crypto.randomUUID();
@@ -70,6 +92,13 @@ router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, qualPass, techPass, status } = req.body || {};
+
+    if (qualPass && (await isPasswordInUse(qualPass, id))) {
+      return res.status(409).json({ error: 'Questa password di qualifica è già utilizzata da un altro fornitore. Scegline una diversa.' });
+    }
+    if (techPass && (await isPasswordInUse(techPass, id))) {
+      return res.status(409).json({ error: 'Questa password tecnica è già utilizzata da un altro fornitore. Scegline una diversa.' });
+    }
 
     const sets = ['name = ?', 'status = ?'];
     const params = [name || '', status || 'active'];

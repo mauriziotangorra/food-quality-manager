@@ -86,9 +86,9 @@ function buildNewSpec(globalConfig, t) {
     master: { nome: "", codice: "" },
     header: { uvcWeight: "", ean: "", approvalDate: "", revision: 0 },
     a: {
-      legalName: "", brand: "", brandLogo: "", giorniGarantiti: "", claim: "", tmc: "", ingredients: "", packaging: "",
-      batchFormat: "", batchDecode: "", tmcFormat: "", prepMode: "", intendedUse: "", storage: "", supplier: "", producedIn: "",
-      processDesc: "", envLabel: "", packMode: "",
+      legalName: "", brand: "", brandLogo: "", giorniGarantiti: "", claim: "", tmc: "", ingredients: "", allergensNote: "",
+      batchDecode: "", intendedUse: "", storage: "", producedIn: "",
+      envLabel: "", packMode: "",
     },
     b: Array.from({ length: 5 }, (_, i) => ({ id: i + 1, p: "", limite: "", risultato: "", conforme: "" })),
     c: [
@@ -109,7 +109,6 @@ function buildNewSpec(globalConfig, t) {
     },
     attachedSheets: [],
     photos: [],
-    specDocs: {},
   };
 }
 
@@ -398,39 +397,6 @@ export default function TechnicalPage({ onLogout }) {
     }
   };
 
-  const handleSpecDocUpload = async (specId, docKey, e) => {
-    const file = e.target.files[0];
-    e.target.value = "";
-    if (!file) return;
-    try {
-      const uploaded = await api.uploadFile(supplier.id, file);
-      setProductSpecs((prev) => {
-        const next = prev.map((s) => (s.id === specId ? { ...s, specDocs: { ...(s.specDocs || {}), [docKey]: { name: file.name, url: uploaded.url } } } : s));
-        persist(qualData, next);
-        return next;
-      });
-    } catch (err) {
-      showAlert(err.message || t("alertFileSize"));
-    }
-  };
-
-  const removeSpecDoc = (specId, docKey) => {
-    showConfirm(t("alertDeletePrompt"), () => {
-      setProductSpecs((prev) => {
-        const next = prev.map((s) => {
-          if (s.id !== specId) return s;
-          const doc = s.specDocs?.[docKey];
-          if (doc?.url) api.deleteUpload(doc.url).catch(() => {});
-          const newDocs = { ...(s.specDocs || {}) };
-          delete newDocs[docKey];
-          return { ...s, specDocs: newDocs };
-        });
-        persist(qualData, next);
-        return next;
-      });
-    });
-  };
-
   const handleExportAll = () => {
     const ok = exportAllSpecsToCSV(productSpecs, lang);
     if (!ok) showAlert(t("alertNoSpecs"));
@@ -570,8 +536,6 @@ export default function TechnicalPage({ onLogout }) {
                   onFilesUpload={(fieldName, e, importType) => handleMultipleFileUpload(spec.id, fieldName, e, importType)}
                   onRemoveFile={(fieldName, idx) => removeSpecFile(spec.id, fieldName, idx)}
                   onBrandLogoUpload={(e) => handleBrandLogoUpload(spec.id, e)}
-                  onSpecDocUpload={(docKey, e) => handleSpecDocUpload(spec.id, docKey, e)}
-                  onRemoveSpecDoc={(docKey) => removeSpecDoc(spec.id, docKey)}
                 />
               ))}
           </div>

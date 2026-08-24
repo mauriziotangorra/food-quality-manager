@@ -51,7 +51,7 @@ export default function SignedDossierTab({ t, qualData, setQualData, supplierId,
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Download size={16} /> CLICCA PER SCARICARE
+                <Download size={16} /> {t("clickToDownload")}
               </a>
             </div>
           </div>
@@ -63,30 +63,33 @@ export default function SignedDossierTab({ t, qualData, setQualData, supplierId,
 
         {!qualData.signedDossier?.fileUrl && (
           <div>
-            <h4 className="text-xl font-black uppercase mb-2 text-slate-900">Nessun file caricato</h4>
-            <p className="text-xs text-slate-500 font-bold px-10">Stampa il dossier dal Tab 7, firmalo, scansionalo e ricaricalo qui per completare ufficialmente l'iter di qualifica.</p>
+            <h4 className="text-xl font-black uppercase mb-2 text-slate-900">{t("noSignedDossierTitle")}</h4>
+            <p className="text-xs text-slate-500 font-bold px-10">{t("signedDossierHint")}</p>
           </div>
         )}
 
         {qualData.signedDossier?.fileUrl ? (
           <div className="flex flex-col gap-4 justify-center mt-6 w-full max-w-sm">
             <button
-              onClick={() => saveImmediate(qualData)}
+              onClick={async () => {
+                const ok = await saveImmediate(qualData);
+                if (ok) showAlert(t("alertSaved"));
+              }}
               className="bg-blue-600 text-white font-black text-sm hover:bg-blue-700 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl shadow-xl transition-all uppercase w-full"
             >
-              <Save size={20} /> Salva il Dossier
+              <Save size={20} /> {t("saveDossierBtn")}
             </button>
             <button
               onClick={handleDelete}
               className="text-red-700 font-black text-sm hover:bg-red-200 flex items-center justify-center gap-3 bg-red-100 px-6 py-3 rounded-2xl border border-red-300 shadow-sm transition-all uppercase"
             >
-              <Trash2 size={18} /> Elimina file
+              <Trash2 size={18} /> {t("deleteFileBtn")}
             </button>
           </div>
         ) : (
           <div className="relative overflow-hidden inline-block mt-4">
             <button className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl pointer-events-none flex items-center gap-3">
-              <FileUp size={20} /> Seleziona PDF Firmato
+              <FileUp size={20} /> {t("selectSignedPdf")}
             </button>
             <input type="file" accept=".pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleUpload} />
           </div>

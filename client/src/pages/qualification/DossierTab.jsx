@@ -18,7 +18,7 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
     <div className="animate-in zoom-in duration-500 space-y-16">
       <div className="flex items-center gap-6">
         <FileSearch size={48} />
-        <h3 className="text-5xl font-black uppercase tracking-tighter">REPORT UFFICIALE</h3>
+        <h3 className="text-5xl font-black uppercase tracking-tighter">{t("reportOfficialTitle")}</h3>
         <div className="h-1 flex-1 bg-slate-100 rounded-full" />
       </div>
       <div className="max-w-4xl mx-auto bg-white border-[20px] border-slate-50 p-12 shadow-2xl rounded-[3rem] overflow-hidden">
@@ -35,7 +35,7 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
               className="w-full p-3 rounded-xl border border-slate-200 shadow-sm font-bold text-sm outline-none focus:ring-2 ring-emerald-500"
               value={qualData.pdfPlace || ""}
               onChange={(e) => setField("pdfPlace", e.target.value)}
-              placeholder="Es. Milano"
+              placeholder={t("placeCityPlaceholder")}
             />
           </div>
           <div className="space-y-2">
@@ -51,7 +51,7 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
 
         <div className="space-y-8">
           <section className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100">
-            <h5 className="text-[10px] font-black uppercase mb-2 text-emerald-600">Identificazione fornitore in esame:</h5>
+            <h5 className="text-[10px] font-black uppercase mb-2 text-emerald-600">{t("supplierUnderReview")}</h5>
             <p className="text-xl font-black uppercase tracking-tighter text-emerald-900">{qualData.anagrafica.rs || supplierName}</p>
           </section>
           <button
@@ -61,7 +61,7 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
             }}
             className="bg-slate-900 text-white px-20 py-8 rounded-[2rem] font-black text-2xl uppercase tracking-tighter hover:bg-emerald-600 transition-all shadow-2xl flex items-center gap-6 mx-auto"
           >
-            <Download size={40} strokeWidth={3} /> SCARICA PDF UFFICIALE
+            <Download size={40} strokeWidth={3} /> {t("downloadOfficialPdf")}
           </button>
         </div>
       </div>

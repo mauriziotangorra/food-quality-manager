@@ -55,7 +55,7 @@ async function getQualData(supplierId) {
   const [
     [anagraficaRows], [contattiRows], [certRows],
     [impegniARows], [impegniBRows], [impegniCRows], [fileAFileRows],
-    [prodottiRows], [docRows], [docFileRows],
+    [prodottiRows],
     [rmRows], [rmFileRows],
     [ffdRows], [ffdFileRows],
     [mpFileRows],
@@ -70,8 +70,6 @@ async function getQualData(supplierId) {
     pool.query('SELECT impegno_id FROM qual_impegni_c WHERE supplier_id = ?', [supplierId]),
     pool.query('SELECT * FROM qual_file_a_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_prodotti WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
-    pool.query('SELECT * FROM qual_qualification_docs WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
-    pool.query('SELECT * FROM qual_qualification_doc_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_raw_materials WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_raw_material_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_food_fraud_defense WHERE supplier_id = ?', [supplierId]),
@@ -83,7 +81,7 @@ async function getQualData(supplierId) {
 
   const hasAnyData = [
     anagraficaRows, contattiRows, certRows, impegniARows, impegniBRows, impegniCRows,
-    fileAFileRows, prodottiRows, docRows, rmRows, ffdRows, mpFileRows, haccpFileRows, dossierRows
+    fileAFileRows, prodottiRows, rmRows, ffdRows, mpFileRows, haccpFileRows, dossierRows
   ].some((rows) => rows.length > 0);
   if (!hasAnyData) return null;
 
@@ -123,15 +121,6 @@ async function getQualData(supplierId) {
   const checkedCIds = new Set(impegniCRows.map((r) => r.impegno_id));
   const fileD = { impegni: boolArrayFromCheckedIds(impegniCIds, checkedCIds) };
 
-  const filesByDoc = {};
-  docFileRows.forEach((r) => {
-    (filesByDoc[r.doc_id] ||= []).push({ name: r.name || '', url: r.url || '' });
-  });
-  const qualificationDocs = docRows.map((r) => ({
-    id: r.id, name: r.name || '', note: r.note || '', date: r.doc_date || '',
-    files: filesByDoc[r.id] || []
-  }));
-
   const rmFilesByMaterial = {};
   rmFileRows.forEach((r) => {
     const bucket = (rmFilesByMaterial[r.material_id] ||= { analysisReports: [], riskAssessment: [] });
@@ -169,7 +158,7 @@ async function getQualData(supplierId) {
 
   return {
     anagrafica, contatti, certificazioni, fileA, fileB, fileC, fileD,
-    qualificationDocs, rawMaterials, foodFraudDefense, mocaPackaging, haccp, signedDossier, impegnoSchede,
+    rawMaterials, foodFraudDefense, mocaPackaging, haccp, signedDossier, impegnoSchede,
     pdfPlace: d.pdf_place || '', pdfDate: d.pdf_date || ''
   };
 }
@@ -183,8 +172,8 @@ async function saveQualData(supplierId, qualData) {
 
   const deleteTables = [
     'qual_anagrafica', 'qual_contatti', 'qual_certificazioni', 'qual_impegni_a', 'qual_impegni_b',
-    'qual_impegni_c', 'qual_file_a_files', 'qual_prodotti', 'qual_qualification_docs',
-    'qual_qualification_doc_files', 'qual_raw_materials', 'qual_raw_material_files',
+    'qual_impegni_c', 'qual_file_a_files', 'qual_prodotti',
+    'qual_raw_materials', 'qual_raw_material_files',
     'qual_food_fraud_defense', 'qual_food_fraud_defense_files', 'qual_moca_packaging_files',
     'qual_haccp_files', 'qual_dossier'
   ];
@@ -262,25 +251,6 @@ async function saveQualData(supplierId, qualData) {
         'INSERT INTO qual_prodotti (supplier_id, id, tipologia, denominazione, origine, shelf_life, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [supplierId, String(p.id), p.tipologia || '', p.denominazione || '', p.origine || '', p.shelfLife || '', i]
       );
-    }
-
-    const docs = Array.isArray(qualData.qualificationDocs) ? qualData.qualificationDocs : [];
-    for (let i = 0; i < docs.length; i++) {
-      const doc = docs[i];
-      // eslint-disable-next-line no-await-in-loop
-      await conn.query(
-        'INSERT INTO qual_qualification_docs (supplier_id, id, name, note, doc_date, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-        [supplierId, String(doc.id), doc.name || '', doc.note || '', doc.date || '', i]
-      );
-      const files = Array.isArray(doc.files) ? doc.files : [];
-      for (let j = 0; j < files.length; j++) {
-        const f = files[j];
-        // eslint-disable-next-line no-await-in-loop
-        await conn.query(
-          'INSERT INTO qual_qualification_doc_files (supplier_id, doc_id, name, url, sort_order) VALUES (?, ?, ?, ?, ?)',
-          [supplierId, String(doc.id), f.name || '', f.url || '', j]
-        );
-      }
     }
 
     const materials = Array.isArray(qualData.rawMaterials) ? qualData.rawMaterials : [];

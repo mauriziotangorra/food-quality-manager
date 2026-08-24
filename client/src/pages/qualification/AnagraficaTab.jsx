@@ -1,9 +1,12 @@
 import React from "react";
 import { Building2, Save } from "lucide-react";
+import { useModal } from "../../hooks/useModal";
 
 const FIELDS = ["rs", "piva", "sede", "citta", "provincia", "cap", "nazione"];
 
 export default function AnagraficaTab({ t, qualData, setQualData, saveImmediate }) {
+  const { showAlert } = useModal();
+
   const update = (field, value) => {
     setQualData((prev) => ({ ...prev, anagrafica: { ...prev.anagrafica, [field]: value } }));
   };
@@ -16,7 +19,10 @@ export default function AnagraficaTab({ t, qualData, setQualData, saveImmediate 
           <h3 className="text-5xl font-black uppercase tracking-tighter">{t("tabAnagrafica")}</h3>
         </div>
         <button
-          onClick={() => saveImmediate(qualData)}
+          onClick={async () => {
+            const ok = await saveImmediate(qualData);
+            if (ok) showAlert(t("alertSaved"));
+          }}
           className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
         >
           <Save size={16} /> {t("save")}

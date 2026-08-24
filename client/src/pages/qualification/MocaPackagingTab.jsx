@@ -6,18 +6,16 @@ import { api } from "../../services/api";
 const EMPTY_MOCA_PACKAGING = { moca: [], technicalSpecs: [], migrationTests: [], ppwr: [] };
 
 const ALL_SLOTS = [
-  { key: "moca", label: "Dichiarazione MOCA / Certificato di Conformità", alwaysVisible: true },
-  { key: "technicalSpecs", label: "Scheda Tecnica dell'Imballaggio" },
-  { key: "migrationTests", label: "Prove di Migrazione" },
-  { key: "ppwr", label: "Documentazione PPWR (Regolamento Imballaggi e Rifiuti da Imballaggio)" },
+  { key: "moca", labelKey: "mocaDeclLabel" },
+  { key: "technicalSpecs", labelKey: "packagingTechSheetLabel" },
+  { key: "migrationTests", labelKey: "migrationTestsLabel" },
+  { key: "ppwr", labelKey: "ppwrDocLabel" },
 ];
 
 export default function MocaPackagingTab({ t, qualData, setQualData, supplierId, saveImmediate }) {
   const { showAlert, showConfirm } = useModal();
   const data = { ...EMPTY_MOCA_PACKAGING, ...(qualData.mocaPackaging || {}) };
-
-  const isPackagingSupplier = (qualData.fileC || []).some((p) => p.tipologia === "Imballaggio");
-  const slots = ALL_SLOTS.filter((s) => s.alwaysVisible || isPackagingSupplier);
+  const slots = ALL_SLOTS;
 
   const handleUpload = async (key, e) => {
     const files = Array.from(e.target.files || []);
@@ -70,11 +68,8 @@ export default function MocaPackagingTab({ t, qualData, setQualData, supplierId,
 
       <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner space-y-8">
         <div className="border-b-2 border-slate-200 pb-4">
-          <h4 className="text-2xl font-black uppercase text-slate-800">MOCA / Imballaggio</h4>
-          <p className="text-xs font-bold text-slate-400 mt-2">
-            Carica la documentazione relativa ai materiali a contatto con alimenti e all'imballaggio utilizzato.
-            {!isPackagingSupplier && " Aggiungi un articolo di tipo \"Imballaggio\" nella tab Prodotti per sbloccare i documenti aggiuntivi."}
-          </p>
+          <h4 className="text-2xl font-black uppercase text-slate-800">{t("mocaPackagingSectionTitle")}</h4>
+          <p className="text-xs font-bold text-slate-400 mt-2">{t("mocaPackagingHint")}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -82,7 +77,7 @@ export default function MocaPackagingTab({ t, qualData, setQualData, supplierId,
             const files = data[slot.key] || [];
             return (
               <div key={slot.key} className="bg-white p-6 rounded-2xl border border-slate-100 space-y-3">
-                <label className="text-[10px] font-black uppercase text-slate-500 block">{slot.label}</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 block">{t(slot.labelKey)}</label>
                 {files.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {files.map((f) => (
@@ -98,10 +93,10 @@ export default function MocaPackagingTab({ t, qualData, setQualData, supplierId,
                     ))}
                   </div>
                 )}
-                {files.length === 0 && <p className="text-xs text-slate-400 font-bold">Nessun file caricato</p>}
+                {files.length === 0 && <p className="text-xs text-slate-400 font-bold">{t("noFileUploaded")}</p>}
                 <div className="relative overflow-hidden inline-block">
                   <button className="bg-slate-900 text-white rounded-xl px-5 py-2.5 font-black text-[11px] uppercase hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 pointer-events-none">
-                    <UploadCloud size={15} /> Carica File
+                    <UploadCloud size={15} /> {t("uploadFileBtn")}
                   </button>
                   <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(slot.key, e)} />
                 </div>

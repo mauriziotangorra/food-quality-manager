@@ -19,18 +19,13 @@ export function exportAllSpecsToCSV(productSpecs, lang) {
     csv += `Brand;${spec.a?.brand || ''}\n`;
     csv += `Claim;${spec.a?.claim || ''}\n`;
     csv += `Ingredienti;${(spec.a?.ingredients || '').replace(/\n/g, ' ')}\n`;
+    csv += `Allergeni;${(spec.a?.allergensNote || '').replace(/\n/g, ' ')}\n`;
     csv += `Shelf life;${spec.a?.tmc || ''}\n`;
-    csv += `Formato;${spec.a?.tmcFormat || ''}\n`;
     csv += `Giorni garantiti alla consegna;${spec.a?.giorniGarantiti || ''}\n`;
-    csv += `Fornitore;${spec.a?.supplier || ''}\n`;
     csv += `Prodotto in;${spec.a?.producedIn || ''}\n`;
-    csv += `Materiale Imballo;${spec.a?.packaging || ''}\n`;
-    csv += `Formato Lotto;${spec.a?.batchFormat || ''}\n`;
     csv += `Decodifica Lotto;${(spec.a?.batchDecode || '').replace(/\n/g, ' ')}\n`;
-    csv += `Modalità di etichettatura;${spec.a?.prepMode || ''}\n`;
     csv += `Modalità d'uso e consumo;${spec.a?.intendedUse || ''}\n`;
     csv += `Condizioni conservazione;${spec.a?.storage || ''}\n`;
-    csv += `Descrizione del processo;${(spec.a?.processDesc || '').replace(/\n/g, ' ')}\n`;
     csv += `Etichetta ambientale;${(spec.a?.envLabel || '').replace(/\n/g, ' ')}\n`;
     csv += `Modalità di confezionamento;${spec.a?.packMode || ''}\n`;
 
