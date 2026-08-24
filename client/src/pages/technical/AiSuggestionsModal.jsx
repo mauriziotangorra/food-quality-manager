@@ -42,17 +42,41 @@ const DOC_TITLES = {
   microbiologici: "Analisi Microbiologiche",
   chimici: "Analisi Chimico-Fisiche",
   etichetta: "Etichetta Prodotto",
+  tecnica: "Scheda Tecnica",
 };
 
-function Field({ label, value, onChange, included, onToggle }) {
+const TECNICA_FIELDS = [
+  { key: "legalName", label: "Denominazione Legale" },
+  { key: "brand", label: "Brand" },
+  { key: "claim", label: "Claim" },
+  { key: "ingredients", label: "Ingredienti", multiline: true },
+  { key: "allergensNote", label: "Allergeni", multiline: true },
+  { key: "tmc", label: "TMC / Shelf Life" },
+  { key: "producedIn", label: "Prodotto in" },
+  { key: "batchDecode", label: "Decodifica Lotto", multiline: true },
+  { key: "intendedUse", label: "Modalità d'uso e consumo" },
+  { key: "storage", label: "Condizioni conservazione" },
+  { key: "envLabel", label: "Etichetta ambientale", multiline: true },
+  { key: "packMode", label: "Modalità di confezionamento" },
+];
+
+const TECNICA_ORGANOLEPTIC_FIELDS = [
+  { key: "consistency", label: "Consistenza" },
+  { key: "aroma", label: "Aroma" },
+  { key: "look", label: "Apparenza/Colore" },
+  { key: "taste", label: "Sapore" },
+];
+
+function Field({ label, value, onChange, included, onToggle, multiline }) {
+  const InputTag = multiline ? "textarea" : "input";
   return (
-    <div className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${included ? "bg-white" : "bg-slate-100 opacity-50"}`}>
-      <input type="checkbox" className="w-4 h-4 shrink-0 accent-blue-600" checked={included} onChange={onToggle} />
+    <div className={`flex items-start gap-3 p-2 rounded-xl transition-colors ${included ? "bg-white" : "bg-slate-100 opacity-50"}`}>
+      <input type="checkbox" className="w-4 h-4 shrink-0 accent-blue-600 mt-1" checked={included} onChange={onToggle} />
       <div className="flex-1 min-w-0">
         <label className="text-[9px] font-black uppercase text-slate-400 block">{label}</label>
-        <input
+        <InputTag
           disabled={!included}
-          className="w-full bg-transparent text-xs font-bold text-slate-800 outline-none disabled:text-slate-400"
+          className={`w-full bg-transparent text-xs font-bold text-slate-800 outline-none disabled:text-slate-400 resize-none ${multiline ? "h-14" : ""}`}
           value={value || ""}
           onChange={onChange}
         />
@@ -83,6 +107,28 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
   });
   const [allergens, setAllergens] = useState(() => (data?.allergens || []).map((a) => ({ ...a, included: true })));
 
+  const [tecnicaFields, setTecnicaFields] = useState(() => {
+    const included = {};
+    TECNICA_FIELDS.forEach(({ key }) => { included[key] = Boolean(data?.[key]); });
+    return { values: data || {}, included };
+  });
+  const [tecnicaOrganoleptic, setTecnicaOrganoleptic] = useState(() => {
+    const included = {};
+    TECNICA_ORGANOLEPTIC_FIELDS.forEach(({ key }) => { included[key] = Boolean(data?.organoleptic?.[key]); });
+    return { values: data?.organoleptic || {}, included };
+  });
+  const [tecnicaNutrition, setTecnicaNutrition] = useState(() => {
+    const included = {};
+    NUTRITION_FIELDS.forEach(({ key }) => { included[key] = Boolean(data?.nutrition?.[key]); });
+    return { values: data?.nutrition || {}, included };
+  });
+  const [tecnicaGmo, setTecnicaGmo] = useState({
+    containsGmo: data?.gmo?.containsGmo || "",
+    statement: data?.gmo?.statement || "",
+    includedContains: Boolean(data?.gmo?.containsGmo),
+    includedStatement: Boolean(data?.gmo?.statement),
+  });
+
   const allergenLabel = (id) => {
     const found = (globalConfig?.allergeni || []).find((a) => String(a.id) === String(id));
     return found?.it || found?.en || `Allergene #${id}`;
@@ -107,14 +153,40 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
         nutrition: selectedNutrition,
         allergens: allergens.filter((a) => a.included).map(({ included: _i, ...a }) => a),
       });
+    } else if (docType === "tecnica") {
+      const selected = {};
+      TECNICA_FIELDS.forEach(({ key }) => {
+        if (tecnicaFields.included[key]) selected[key] = tecnicaFields.values[key] || "";
+      });
+      const selectedNutrition = {};
+      NUTRITION_FIELDS.forEach(({ key }) => { if (tecnicaNutrition.included[key]) selectedNutrition[key] = tecnicaNutrition.values[key] || ""; });
+      const selectedOrganoleptic = {};
+      TECNICA_ORGANOLEPTIC_FIELDS.forEach(({ key }) => { if (tecnicaOrganoleptic.included[key]) selectedOrganoleptic[key] = tecnicaOrganoleptic.values[key] || ""; });
+      onApply({
+        ...selected,
+        nutrition: selectedNutrition,
+        organoleptic: selectedOrganoleptic,
+        gmo: {
+          containsGmo: tecnicaGmo.includedContains ? tecnicaGmo.containsGmo : "",
+          statement: tecnicaGmo.includedStatement ? tecnicaGmo.statement : "",
+        },
+      });
     }
   };
+
+  const tecnicaHasData =
+    Object.values(tecnicaFields.included).some(Boolean) ||
+    Object.values(tecnicaNutrition.included).some(Boolean) ||
+    Object.values(tecnicaOrganoleptic.included).some(Boolean) ||
+    tecnicaGmo.includedContains || tecnicaGmo.includedStatement;
 
   const hasAnyData =
     docType === "logistica"
       ? Object.values(logistics.included).some(Boolean)
       : docType === "microbiologici" || docType === "chimici"
       ? rows.length > 0
+      : docType === "tecnica"
+      ? tecnicaHasData
       : ingredients.included || Object.values(nutrition.included).some(Boolean) || allergens.length > 0;
 
   return (
@@ -258,6 +330,98 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
                       </select>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {docType === "tecnica" && (
+            <div className="space-y-6">
+              {Object.values(tecnicaFields.included).some(Boolean) && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Dati Commerciali</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {TECNICA_FIELDS.filter((f) => tecnicaFields.values?.[f.key]).map((f) => (
+                      <Field
+                        key={f.key}
+                        label={f.label}
+                        multiline={f.multiline}
+                        value={tecnicaFields.values?.[f.key]}
+                        included={tecnicaFields.included[f.key]}
+                        onToggle={() => setTecnicaFields((prev) => ({ ...prev, included: { ...prev.included, [f.key]: !prev.included[f.key] } }))}
+                        onChange={(e) => setTecnicaFields((prev) => ({ ...prev, values: { ...prev.values, [f.key]: e.target.value } }))}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Object.values(tecnicaNutrition.included).some(Boolean) && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Tabella Nutrizionale (per 100g/100ml)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {NUTRITION_FIELDS.filter((f) => tecnicaNutrition.values?.[f.key]).map((f) => (
+                      <Field
+                        key={f.key}
+                        label={f.label}
+                        value={tecnicaNutrition.values?.[f.key]}
+                        included={tecnicaNutrition.included[f.key]}
+                        onToggle={() => setTecnicaNutrition((prev) => ({ ...prev, included: { ...prev.included, [f.key]: !prev.included[f.key] } }))}
+                        onChange={(e) => setTecnicaNutrition((prev) => ({ ...prev, values: { ...prev.values, [f.key]: e.target.value } }))}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Object.values(tecnicaOrganoleptic.included).some(Boolean) && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Caratteristiche Organolettiche</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {TECNICA_ORGANOLEPTIC_FIELDS.filter((f) => tecnicaOrganoleptic.values?.[f.key]).map((f) => (
+                      <Field
+                        key={f.key}
+                        label={f.label}
+                        value={tecnicaOrganoleptic.values?.[f.key]}
+                        included={tecnicaOrganoleptic.included[f.key]}
+                        onToggle={() => setTecnicaOrganoleptic((prev) => ({ ...prev, included: { ...prev.included, [f.key]: !prev.included[f.key] } }))}
+                        onChange={(e) => setTecnicaOrganoleptic((prev) => ({ ...prev, values: { ...prev.values, [f.key]: e.target.value } }))}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(tecnicaGmo.includedContains || tecnicaGmo.includedStatement) && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Dichiarazione OGM</h4>
+                  {tecnicaGmo.includedContains && (
+                    <div className="flex items-center gap-3 p-2 bg-white rounded-xl">
+                      <input type="checkbox" className="w-4 h-4 accent-blue-600" checked={tecnicaGmo.includedContains} onChange={() => setTecnicaGmo((p) => ({ ...p, includedContains: !p.includedContains }))} />
+                      <label className="text-[9px] font-black uppercase text-slate-400 flex-1">Contiene OGM?</label>
+                      <select
+                        className="p-2 bg-slate-50 rounded-lg text-[10px] font-bold outline-none"
+                        value={tecnicaGmo.containsGmo}
+                        onChange={(e) => setTecnicaGmo((p) => ({ ...p, containsGmo: e.target.value }))}
+                      >
+                        <option value="Sì">Sì</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                  )}
+                  {tecnicaGmo.includedStatement && (
+                    <div className="flex items-start gap-3 p-2 bg-white rounded-xl">
+                      <input type="checkbox" className="w-4 h-4 accent-blue-600 mt-1" checked={tecnicaGmo.includedStatement} onChange={() => setTecnicaGmo((p) => ({ ...p, includedStatement: !p.includedStatement }))} />
+                      <div className="flex-1">
+                        <label className="text-[9px] font-black uppercase text-slate-400 block">Testo Dichiarazione</label>
+                        <textarea
+                          className="w-full bg-transparent text-xs font-bold text-slate-800 outline-none resize-none h-14"
+                          value={tecnicaGmo.statement}
+                          onChange={(e) => setTecnicaGmo((p) => ({ ...p, statement: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

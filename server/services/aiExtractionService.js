@@ -4,7 +4,7 @@ const { GoogleGenAI, Type } = require('@google/genai');
 // Modello Gemini usato per la lettura documenti: multimodale (PDF nativo +
 // immagini), rapido ed economico rispetto ai modelli "pro". Configurabile
 // via env senza toccare il codice.
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 // Gemini legge nativamente PDF (incluse scansioni, via OCR interno) e immagini
 // come "inlineData". Non supporta Office (.doc/.xls) come binario grezzo:
@@ -36,7 +36,7 @@ const TABLE_ROW_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     p: { type: Type.STRING }, limite: { type: Type.STRING }, risultato: { type: Type.STRING },
-    conforme: { type: Type.STRING, enum: ['Sì', 'No', ''] }
+    conforme: { type: Type.STRING }
   }
 };
 
@@ -76,6 +76,27 @@ const RESPONSE_SCHEMAS = {
         }
       }
     }
+  },
+  tecnica: {
+    type: Type.OBJECT,
+    properties: {
+      ...STRING_FIELDS([
+        'legalName', 'brand', 'claim', 'ingredients', 'allergensNote', 'tmc',
+        'producedIn', 'batchDecode', 'intendedUse', 'storage', 'envLabel', 'packMode'
+      ]),
+      nutrition: {
+        type: Type.OBJECT,
+        properties: STRING_FIELDS(['energyKj', 'energyKcal', 'fat', 'satFat', 'carbs', 'sugar', 'fiber', 'protein', 'salt'])
+      },
+      organoleptic: { type: Type.OBJECT, properties: STRING_FIELDS(['consistency', 'aroma', 'look', 'taste']) },
+      gmo: {
+        type: Type.OBJECT,
+        properties: {
+          containsGmo: { type: Type.STRING },
+          statement: { type: Type.STRING }
+        }
+      }
+    }
   }
 };
 
@@ -101,6 +122,14 @@ const BASE_PROMPTS = {
     '3) per ciascuno degli allergeni della lista fornita qui sotto, indica se è presente come ingrediente ("Sì (Ingrediente)") o come derivato/additivo ("Sì (Derivato/Additivo)") SOLO se ne hai trovato evidenza chiara in etichetta; non includere nell\'elenco gli allergeni assenti. ' +
     "Usa esattamente l'id fornito per ciascun allergene nella risposta.\n" +
     "Lista allergeni noti (id: nome): {{ALLERGEN_LIST}}\n" +
+    "Rispondi SOLO con un oggetto JSON conforme allo schema fornito. Se un campo non è determinabile, lascialo come stringa vuota o omettilo. Non inventare dati.",
+  tecnica:
+    "Sei un assistente che legge la scheda tecnica generale di un prodotto alimentare (documento commerciale/tecnico fornito dal fornitore, non l'etichetta e non un rapporto di laboratorio). Estrai, solo se presenti nel documento: " +
+    "denominazione legale, marchio/brand, claim commerciale, elenco ingredienti, eventuale nota allergeni, TMC/shelf life, luogo di produzione, decodifica del lotto, modalità d'uso e consumo, condizioni di conservazione, etichetta ambientale, modalità di confezionamento; " +
+    "i valori della tabella nutrizionale per 100g/100ml (energia in kJ e kcal, grassi, di cui saturi, carboidrati, di cui zuccheri, fibre, proteine, sale); " +
+    "le caratteristiche organolettiche (consistenza, aroma, aspetto/colore, sapore); " +
+    'e la dichiarazione OGM (se il prodotto contiene OGM: "Sì" o "No", più eventuale testo della dichiarazione). ' +
+    "NON estrarre parametri di analisi microbiologica o chimico-fisica anche se presenti nel documento: quelli si caricano da altri documenti dedicati. " +
     "Rispondi SOLO con un oggetto JSON conforme allo schema fornito. Se un campo non è determinabile, lascialo come stringa vuota o omettilo. Non inventare dati."
 };
 

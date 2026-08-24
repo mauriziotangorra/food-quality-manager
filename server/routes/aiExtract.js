@@ -18,10 +18,10 @@ const MIME_BY_EXT = {
   '.webp': 'image/webp'
 };
 
-// I 4 tipi di upload di AP 05.1.1 (Product Specification) che hanno un
-// mapping chiaro verso campi del form; "tecnica" (scheda tecnica generica) e
-// "foto" (foto prodotto) restano upload semplici, senza estrazione AI.
-const DOC_TYPES = new Set(['logistica', 'microbiologici', 'chimici', 'etichetta']);
+// I tipi di upload di AP 05.1.1 (Product Specification) che hanno un mapping
+// verso campi del form; "foto" (foto prodotto) resta un upload semplice,
+// senza estrazione AI (nessun campo strutturato da leggere da una foto generica).
+const DOC_TYPES = new Set(['logistica', 'microbiologici', 'chimici', 'etichetta', 'tecnica']);
 
 // Risolve un fileUrl ("/uploads/<scope>/<file>") nel path assoluto sul disco,
 // verificando che resti dentro UPLOAD_ROOT e che il richiedente possa

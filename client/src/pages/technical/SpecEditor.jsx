@@ -2,7 +2,7 @@ import React from "react";
 import {
   ChevronDown, ChevronUp, Trash2, Save, Edit3, FileClock, History, Download, Printer,
   FileUp, Truck, Microscope, FlaskRound, Image as ImageIcon, ShoppingBag, Scale, Apple,
-  UtensilsCrossed, AlertCircle, Dna, Package, Check, Info,
+  UtensilsCrossed, AlertCircle, Dna, Package, Check, Info, FileText,
 } from "lucide-react";
 
 export default function SpecEditor({
