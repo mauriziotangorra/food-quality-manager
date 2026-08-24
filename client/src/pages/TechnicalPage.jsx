@@ -14,9 +14,9 @@ import SpecEditor from "./technical/SpecEditor";
 import AiSuggestionsModal from "./technical/AiSuggestionsModal";
 
 // Import che hanno un mapping AI -> campi del form (vedi aiExtract sul
-// server): Scheda Tecnica ("tecnica") e Foto Prodotto ("foto") restano
-// upload semplici, senza lettura AI.
-const AI_DOC_TYPES = new Set(["logistica", "microbiologici", "chimici", "etichetta"]);
+// server): solo Foto Prodotto ("foto") resta un upload semplice, senza
+// lettura AI (nessun campo strutturato da leggere da una foto generica).
+const AI_DOC_TYPES = new Set(["logistica", "microbiologici", "chimici", "etichetta", "tecnica"]);
 // Gemini legge nativamente solo PDF e immagini: un file .xls/.doc caricato
 // viene comunque allegato normalmente, semplicemente senza innescare l'AI.
 const AI_SUPPORTED_FILE_RE = /\.(pdf|jpe?g|png|webp)$/i;
@@ -43,6 +43,21 @@ function mergeExtracted(docType, acc, cur) {
       ingredients: acc.ingredients || cur.ingredients || "",
       nutrition,
       allergens: Array.from(allergensMap.values()),
+    };
+  }
+  if (docType === "tecnica") {
+    const mergeFlat = (a = {}, b = {}) => {
+      const out = { ...a };
+      Object.keys(b).forEach((k) => { if (!out[k] && b[k]) out[k] = b[k]; });
+      return out;
+    };
+    const { nutrition: accNutrition, organoleptic: accOrg, gmo: accGmo, ...accFlat } = acc;
+    const { nutrition: curNutrition, organoleptic: curOrg, gmo: curGmo, ...curFlat } = cur;
+    return {
+      ...mergeFlat(accFlat, curFlat),
+      nutrition: mergeFlat(accNutrition, curNutrition),
+      organoleptic: mergeFlat(accOrg, curOrg),
+      gmo: mergeFlat(accGmo, curGmo),
     };
   }
   return cur;
@@ -360,6 +375,23 @@ export default function TechnicalPage({ onLogout }) {
       (selected.allergens || []).forEach((a) => {
         updateSpecTable(specId, "f", a.id, "presenza", a.presenza);
       });
+    } else if (docType === "tecnica") {
+      const FIELD_A_KEYS = [
+        "legalName", "brand", "claim", "ingredients", "allergensNote", "tmc",
+        "producedIn", "batchDecode", "intendedUse", "storage", "envLabel", "packMode",
+      ];
+      FIELD_A_KEYS.forEach((key) => {
+        if (selected[key]) updateSpecField(specId, `a.${key}`, selected[key]);
+      });
+      Object.entries(selected.nutrition || {}).forEach(([key, val]) => {
+        const rowId = NUTRITION_ROW_ID[key];
+        if (val && rowId) updateSpecTable(specId, "c", rowId, "v", val);
+      });
+      Object.entries(selected.organoleptic || {}).forEach(([key, val]) => {
+        if (val) updateSpecField(specId, `e.${key}`, val);
+      });
+      if (selected.gmo?.containsGmo) updateSpecField(specId, "g.containsGmo", selected.gmo.containsGmo);
+      if (selected.gmo?.statement) updateSpecField(specId, "g.statement", selected.gmo.statement);
     }
 
     setAiSuggestion(null);
