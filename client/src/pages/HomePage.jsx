@@ -5,10 +5,6 @@ import {
   FileText,
   ChevronRight,
   CloudOff,
-  Image as ImageIcon,
-  UploadCloud,
-  Download,
-  Trash2,
 } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { api } from "../services/api";
@@ -27,28 +23,6 @@ export default function HomePage({ onNavigate }) {
       })
       .catch(() => setOnline(false));
   }, []);
-
-  const handleMasterLogoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const uploaded = await api.uploadFile("global", file);
-      await api.saveSettings({ logo: uploaded.url });
-      setMasterLogo(uploaded.url);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleMasterLogoDelete = async () => {
-    try {
-      if (masterLogo) await api.deleteUpload(masterLogo).catch(() => {});
-      await api.saveSettings({ logo: null });
-      setMasterLogo(null);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const cards = [
     {
@@ -112,27 +86,6 @@ export default function HomePage({ onNavigate }) {
             {t("subtitle")}
           </p>
         </header>
-
-        <div className="mb-12 z-10 w-full max-w-lg mx-auto bg-white p-8 rounded-[2.5rem] shadow-xl border">
-          <div className="flex items-center gap-4 mb-6"><ImageIcon className="text-blue-600"/><h3 className="font-black uppercase text-sm">Official Logo Setup</h3></div>
-          <div className="relative group bg-slate-50 border-2 border-dashed p-10 rounded-3xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-slate-100 transition-all">
-            {masterLogo ? (
-              <>
-                <img src={masterLogo} className="h-16 object-contain" />
-                <div className="absolute top-4 right-4 flex gap-2 z-20">
-                  <a href={masterLogo} download="master_logo" onClick={(e) => e.stopPropagation()} className="bg-white p-2 rounded-full shadow hover:text-emerald-600 text-slate-400 transition-all" title="Scarica Logo">
-                    <Download size={16}/>
-                  </a>
-                  <button onClick={handleMasterLogoDelete} className="bg-white p-2 rounded-full shadow hover:text-red-600 text-slate-400 transition-all" title="Elimina Logo">
-                    <Trash2 size={16}/>
-                  </button>
-                </div>
-              </>
-            ) : <UploadCloud size={48} className="text-slate-300" />}
-            <span className="text-[10px] font-black uppercase text-slate-400">Imposta Logo Ufficiale</span>
-            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleMasterLogoUpload} />
-          </div>
-        </div>
 
         {/* Cards grid */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

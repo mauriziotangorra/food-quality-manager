@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, PlusCircle, Edit3, Trash2, Save, FileText } from "lucide-react";
+import { ArrowLeft, PlusCircle, Edit3, Trash2, Save, FileText, Image as ImageIcon, UploadCloud, Download } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useModal } from "../hooks/useModal";
 import { api } from "../services/api";
@@ -30,13 +30,14 @@ export default function AdminPage({ onLogout }) {
   const [globalConfig, setGlobalConfig] = useState({ allergeni: [], impegniA: [], impegniB: [], impegniC: [] });
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [savingTemplates, setSavingTemplates] = useState(false);
+  const [masterLogo, setMasterLogo] = useState(null);
 
   const loadSuppliers = () => {
     setLoading(true);
     api
       .getSuppliers()
       .then((data) => setSuppliers(data.suppliers || []))
-      .catch(() => showAlert("Errore nel recupero dei fornitori"))
+      .catch(() => showAlert(t("adminLoadSuppliersError")))
       .finally(() => setLoading(false));
   };
 
@@ -51,8 +52,9 @@ export default function AdminPage({ onLogout }) {
           impegniB: data?.settings?.templates?.impegniB || [],
           impegniC: data?.settings?.templates?.impegniC || [],
         });
+        setMasterLogo(data?.settings?.logo || null);
       })
-      .catch(() => showAlert("Errore nel recupero delle dichiarazioni"))
+      .catch(() => showAlert(t("adminLoadDeclarationsError")))
       .finally(() => setLoadingTemplates(false));
   };
 
@@ -63,7 +65,7 @@ export default function AdminPage({ onLogout }) {
   }, []);
 
   const handleSave = async () => {
-    if (!form.name) return showAlert("Il nome del fornitore è obbligatorio");
+    if (!form.name) return showAlert(t("adminSupplierNameRequired"));
     try {
       if (form.id) {
         await api.updateSupplier(form.id, {
@@ -74,24 +76,26 @@ export default function AdminPage({ onLogout }) {
         });
       } else {
         if (!form.qualPass || !form.techPass) {
-          return showAlert("Password di qualifica e tecnica sono obbligatorie per un nuovo fornitore");
+          return showAlert(t("adminQualPassRequired"));
         }
         await api.createSupplier(form);
       }
       setForm(null);
       loadSuppliers();
+      showAlert(t("adminSupplierSaved"));
     } catch (e) {
-      showAlert(e.message || "Errore nel salvataggio del fornitore");
+      showAlert(e.message || t("adminSaveSupplierError"));
     }
   };
 
   const handleDelete = (supplier) => {
-    showConfirm(`Eliminare il fornitore "${supplier.name}"? Verranno rimossi anche i suoi dati di qualifica.`, async () => {
+    showConfirm(t("adminConfirmDeleteSupplier").replace("{name}", supplier.name), async () => {
       try {
         await api.deleteSupplier(supplier.id);
         loadSuppliers();
+        showAlert(t("adminSupplierDeleted"));
       } catch (e) {
-        showAlert(e.message || "Errore nella cancellazione del fornitore");
+        showAlert(e.message || t("adminDeleteSupplierError"));
       }
     });
   };
@@ -122,12 +126,41 @@ export default function AdminPage({ onLogout }) {
     setSavingTemplates(true);
     try {
       await api.saveSettings({ templates: globalConfig });
-      showAlert("Dichiarazioni salvate con successo!");
+      showAlert(t("adminDeclarationsSaved"));
     } catch (e) {
-      showAlert(e.message || "Errore durante il salvataggio delle dichiarazioni");
+      showAlert(e.message || t("adminSaveDeclarationsError"));
     } finally {
       setSavingTemplates(false);
     }
+  };
+
+  // --- Logo ufficiale (mostrato in home page e nei documenti generati) ---
+
+  const handleMasterLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const uploaded = await api.uploadFile("global", file);
+      await api.saveSettings({ logo: uploaded.url });
+      setMasterLogo(uploaded.url);
+      showAlert(t("logoSaved"));
+    } catch (err) {
+      showAlert(err.message || t("logoUploadError"));
+    }
+  };
+
+  const handleMasterLogoDelete = () => {
+    showConfirm(t("logoDeleteConfirm"), async () => {
+      try {
+        if (masterLogo) await api.deleteUpload(masterLogo).catch(() => {});
+        await api.saveSettings({ logo: null });
+        setMasterLogo(null);
+        showAlert(t("logoRemoved"));
+      } catch (err) {
+        showAlert(err.message || t("logoRemoveError"));
+      }
+    });
   };
 
   return (
@@ -145,7 +178,7 @@ export default function AdminPage({ onLogout }) {
               onClick={() => setForm(EMPTY_FORM)}
               className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-blue-700 flex items-center gap-2"
             >
-              <PlusCircle size={20} /> Nuovo Fornitore
+              <PlusCircle size={20} /> {t("adminNewSupplier")}
             </button>
           )}
           {view === "declarations" && (
@@ -154,7 +187,7 @@ export default function AdminPage({ onLogout }) {
               disabled={savingTemplates}
               className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50"
             >
-              <Save size={20} /> {savingTemplates ? "Salvataggio..." : "Salva Dichiarazioni"}
+              <Save size={20} /> {savingTemplates ? t("savingEllipsis") : t("adminSaveDeclarations")}
             </button>
           )}
         </div>
@@ -166,7 +199,7 @@ export default function AdminPage({ onLogout }) {
               view === "suppliers" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:text-slate-800"
             }`}
           >
-            Fornitori
+            {t("adminTabSuppliers")}
           </button>
           <button
             onClick={() => setView("declarations")}
@@ -174,7 +207,7 @@ export default function AdminPage({ onLogout }) {
               view === "declarations" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:text-slate-800"
             }`}
           >
-            Dichiarazioni
+            {t("adminTabDeclarations")}
           </button>
         </div>
 
@@ -182,10 +215,10 @@ export default function AdminPage({ onLogout }) {
           <>
             {form && (
               <div className="bg-white p-12 rounded-[4rem] shadow-2xl border-4 border-blue-100">
-                <h3 className="text-2xl font-black mb-10 uppercase">{form.id ? "Modifica Profilo" : "Nuovo Profilo Fornitore"}</h3>
+                <h3 className="text-2xl font-black mb-10 uppercase">{form.id ? t("adminEditProfile") : t("adminNewProfile")}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   <input
-                    placeholder="Ragione Sociale"
+                    placeholder={t("rs")}
                     className="p-6 bg-slate-50 rounded-3xl font-bold border-none shadow-inner"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -208,10 +241,10 @@ export default function AdminPage({ onLogout }) {
                     onClick={handleSave}
                     className="bg-slate-900 text-white px-12 py-5 rounded-3xl font-black uppercase text-xs shadow-xl hover:bg-blue-600 transition-all"
                   >
-                    Salva Database
+                    {t("adminSaveDb")}
                   </button>
                   <button onClick={() => setForm(null)} className="text-slate-400 font-black uppercase text-xs">
-                    Annulla
+                    {t("cancel")}
                   </button>
                 </div>
               </div>
@@ -221,9 +254,9 @@ export default function AdminPage({ onLogout }) {
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b text-[10px] font-black uppercase tracking-widest text-slate-400">
                   <tr>
-                    <th className="p-10">Azienda</th>
-                    <th className="p-10">Stato</th>
-                    <th className="p-10 text-right">Azioni</th>
+                    <th className="p-10">{t("adminCompanyCol")}</th>
+                    <th className="p-10">{t("adminStatusCol")}</th>
+                    <th className="p-10 text-right">{t("adminActionsCol")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -249,7 +282,7 @@ export default function AdminPage({ onLogout }) {
                   ))}
                   {!loading && suppliers.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="p-10 text-center text-slate-400 font-bold">Nessun fornitore</td>
+                      <td colSpan={3} className="p-10 text-center text-slate-400 font-bold">{t("adminNoSuppliers")}</td>
                     </tr>
                   )}
                 </tbody>
@@ -261,20 +294,47 @@ export default function AdminPage({ onLogout }) {
         {view === "declarations" && (
           <div className="space-y-12">
             {loadingTemplates ? (
-              <div className="text-center text-slate-400 font-bold py-20">Caricamento...</div>
+              <div className="text-center text-slate-400 font-bold py-20">{t("loading")}</div>
             ) : (
               <>
+                {/* Logo Ufficiale */}
+                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3 border-b-2 border-slate-100 pb-4 mb-8">
+                    <ImageIcon size={24} className="text-blue-600" />
+                    <h4 className="text-2xl font-black uppercase text-slate-800">{t("officialLogo")}</h4>
+                  </div>
+                  <div className="relative group bg-slate-50 border-2 border-dashed p-10 rounded-3xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-slate-100 transition-all max-w-sm">
+                    {masterLogo ? (
+                      <>
+                        <img src={masterLogo} alt="Logo" className="h-16 object-contain" />
+                        <div className="absolute top-4 right-4 flex gap-2 z-20">
+                          <a href={masterLogo} download="master_logo" onClick={(e) => e.stopPropagation()} className="bg-white p-2 rounded-full shadow hover:text-emerald-600 text-slate-400 transition-all" title={t("downloadLogo")}>
+                            <Download size={16} />
+                          </a>
+                          <button onClick={handleMasterLogoDelete} className="bg-white p-2 rounded-full shadow hover:text-red-600 text-slate-400 transition-all" title={t("deleteLogo")}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <UploadCloud size={48} className="text-slate-300" />
+                    )}
+                    <span className="text-[10px] font-black uppercase text-slate-400">{t("logoSetupHint")}</span>
+                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleMasterLogoUpload} />
+                  </div>
+                </div>
+
                 {/* Dichiarazione A */}
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
-                      <FileText size={24} /> Dichiarazione A — OGM, Etichettatura e Impegni Integrali
+                      <FileText size={24} /> {t("declATitleAdmin")}
                     </h4>
                     <button
                       onClick={() => addToList("impegniA", NEW_IMPEGNO_A)}
                       className="text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-emerald-100 flex items-center gap-2"
                     >
-                      <PlusCircle size={14} /> Aggiungi Impegno
+                      <PlusCircle size={14} /> {t("addCommitment")}
                     </button>
                   </div>
                   <div className="space-y-4">
@@ -284,10 +344,10 @@ export default function AdminPage({ onLogout }) {
                           className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
                           value={imp.it}
                           onChange={(e) => updateList("impegniA", imp.id, { it: e.target.value })}
-                          placeholder="Testo della dichiarazione (italiano)..."
+                          placeholder={t("declTextPlaceholderIt")}
                         />
                         <button
-                          onClick={() => removeFromList("impegniA", imp.id, "Eliminare questo impegno?")}
+                          onClick={() => removeFromList("impegniA", imp.id, t("confirmDeleteCommitment"))}
                           className="text-red-400 hover:text-red-600 shrink-0 p-2"
                         >
                           <Trash2 size={16} />
@@ -295,7 +355,7 @@ export default function AdminPage({ onLogout }) {
                       </div>
                     ))}
                     {globalConfig.impegniA.length === 0 && (
-                      <p className="text-sm font-bold text-slate-400 text-center py-4">Nessun impegno presente.</p>
+                      <p className="text-sm font-bold text-slate-400 text-center py-4">{t("noCommitments")}</p>
                     )}
                   </div>
                 </div>
@@ -304,13 +364,13 @@ export default function AdminPage({ onLogout }) {
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
-                      <FileText size={24} /> Dichiarazione B — Gestione Processi e Flussi Logistici
+                      <FileText size={24} /> {t("declBTitleAdmin")}
                     </h4>
                     <button
                       onClick={() => addToList("impegniB", NEW_IMPEGNO_B)}
                       className="text-blue-600 bg-blue-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-blue-100 flex items-center gap-2"
                     >
-                      <PlusCircle size={14} /> Aggiungi Parametro
+                      <PlusCircle size={14} /> {t("addParameter")}
                     </button>
                   </div>
                   <div className="space-y-4">
@@ -321,17 +381,17 @@ export default function AdminPage({ onLogout }) {
                             className="w-full p-2 border border-slate-200 rounded-xl text-sm font-black text-slate-900 outline-none focus:border-blue-500 bg-white"
                             value={imp.title_it}
                             onChange={(e) => updateList("impegniB", imp.id, { title_it: e.target.value })}
-                            placeholder="Titolo parametro (italiano)..."
+                            placeholder={t("paramTitlePlaceholderIt")}
                           />
                           <textarea
                             className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
                             value={imp.desc_it}
                             onChange={(e) => updateList("impegniB", imp.id, { desc_it: e.target.value })}
-                            placeholder="Descrizione parametro (italiano)..."
+                            placeholder={t("paramDescPlaceholderIt")}
                           />
                         </div>
                         <button
-                          onClick={() => removeFromList("impegniB", imp.id, "Eliminare questo parametro?")}
+                          onClick={() => removeFromList("impegniB", imp.id, t("confirmDeleteParameter"))}
                           className="text-red-400 hover:text-red-600 shrink-0 p-2"
                         >
                           <Trash2 size={16} />
@@ -339,7 +399,7 @@ export default function AdminPage({ onLogout }) {
                       </div>
                     ))}
                     {globalConfig.impegniB.length === 0 && (
-                      <p className="text-sm font-bold text-slate-400 text-center py-4">Nessun parametro presente.</p>
+                      <p className="text-sm font-bold text-slate-400 text-center py-4">{t("noParameters")}</p>
                     )}
                   </div>
                 </div>
@@ -348,13 +408,13 @@ export default function AdminPage({ onLogout }) {
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
-                      <FileText size={24} /> Dichiarazione C
+                      <FileText size={24} /> {t("declCTitleAdmin")}
                     </h4>
                     <button
                       onClick={() => addToList("impegniC", NEW_IMPEGNO_C)}
                       className="text-amber-600 bg-amber-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-amber-100 flex items-center gap-2"
                     >
-                      <PlusCircle size={14} /> Aggiungi Dichiarazione
+                      <PlusCircle size={14} /> {t("addDeclaration")}
                     </button>
                   </div>
                   <div className="space-y-4">
@@ -364,10 +424,10 @@ export default function AdminPage({ onLogout }) {
                           className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
                           value={imp.it}
                           onChange={(e) => updateList("impegniC", imp.id, { it: e.target.value })}
-                          placeholder="Testo della dichiarazione (italiano)..."
+                          placeholder={t("declTextPlaceholderIt")}
                         />
                         <button
-                          onClick={() => removeFromList("impegniC", imp.id, "Eliminare questa dichiarazione?")}
+                          onClick={() => removeFromList("impegniC", imp.id, t("confirmDeleteDeclaration"))}
                           className="text-red-400 hover:text-red-600 shrink-0 p-2"
                         >
                           <Trash2 size={16} />
@@ -375,7 +435,7 @@ export default function AdminPage({ onLogout }) {
                       </div>
                     ))}
                     {globalConfig.impegniC.length === 0 && (
-                      <p className="text-sm font-bold text-slate-400 text-center py-4">Nessuna dichiarazione presente.</p>
+                      <p className="text-sm font-bold text-slate-400 text-center py-4">{t("noDeclarations")}</p>
                     )}
                   </div>
                 </div>
@@ -384,13 +444,13 @@ export default function AdminPage({ onLogout }) {
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
-                      <FileText size={24} /> Griglia Allergeni (Intero Stabilimento)
+                      <FileText size={24} /> {t("allergenGridTitleAdmin")}
                     </h4>
                     <button
                       onClick={() => addToList("allergeni", NEW_ALLERGEN)}
                       className="text-purple-600 bg-purple-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-purple-100 flex items-center gap-2"
                     >
-                      <PlusCircle size={14} /> Aggiungi Allergene
+                      <PlusCircle size={14} /> {t("addAllergen")}
                     </button>
                   </div>
                   <div className="space-y-3">
@@ -400,10 +460,10 @@ export default function AdminPage({ onLogout }) {
                           className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-500 bg-white"
                           value={all.it}
                           onChange={(e) => updateList("allergeni", all.id, { it: e.target.value })}
-                          placeholder="Nome allergene (italiano)..."
+                          placeholder={t("allergenNamePlaceholderIt")}
                         />
                         <button
-                          onClick={() => removeFromList("allergeni", all.id, "Eliminare questo allergene?")}
+                          onClick={() => removeFromList("allergeni", all.id, t("confirmDeleteAllergen"))}
                           className="text-red-400 hover:text-red-600 shrink-0 p-2"
                         >
                           <Trash2 size={16} />
@@ -411,7 +471,7 @@ export default function AdminPage({ onLogout }) {
                       </div>
                     ))}
                     {globalConfig.allergeni.length === 0 && (
-                      <p className="text-sm font-bold text-slate-400 text-center py-4">Nessun allergene presente.</p>
+                      <p className="text-sm font-bold text-slate-400 text-center py-4">{t("noAllergens")}</p>
                     )}
                   </div>
                 </div>

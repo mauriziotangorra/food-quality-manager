@@ -76,7 +76,7 @@ function openPrintWindow(title, bodyHtml, extraStyle = '') {
   win.document.close();
 }
 
-// --- 1) DOSSIER DI QUALIFICA FORNITORE (Tab 7) ---
+// --- 1) DOSSIER DI QUALIFICA FORNITORE (Tab 12) ---
 export function generateQualificationDossierPDF({ qualData, supplierName, globalConfig, lang, t, masterLogoUrl }) {
   const masterLogoAbs = toAbsoluteUrl(masterLogoUrl);
   const pdfPlace = qualData.pdfPlace || '_________________';
@@ -295,16 +295,13 @@ export function generateSpecPDF({ spec, qualData, globalConfig, lang, t, masterL
         <tr><td class="label">${t('brand')}</td><td>${spec.a?.brand || ''}</td></tr>
         <tr><td class="label">${t('claim')}</td><td>${spec.a?.claim || ''}</td></tr>
         <tr><td class="label">${t('ingredients')}</td><td>${spec.a?.ingredients || ''}</td></tr>
-        ${pdfType === 'standard' ? `<tr><td class="label">${t('tmc')} / ${t('tmcFormat')}</td><td>${spec.a?.tmc || ''} / ${spec.a?.tmcFormat || ''}</td></tr>` : ''}
+        <tr><td class="label">${t('allergensNote')}</td><td>${spec.a?.allergensNote || ''}</td></tr>
+        ${pdfType === 'standard' ? `<tr><td class="label">${t('tmc')}</td><td>${spec.a?.tmc || ''}</td></tr>` : ''}
         ${pdfType === 'ifp' ? `<tr><td class="label">${t('ggConsegna')}</td><td>${spec.a?.giorniGarantiti || ''}</td></tr>` : ''}
-        <tr><td class="label">${t('supplier')} / ${t('producedIn')}</td><td>${spec.a?.supplier || ''} / ${spec.a?.producedIn || ''}</td></tr>
-        <tr><td class="label">${t('packaging')}</td><td>${spec.a?.packaging || ''}</td></tr>
-        <tr><td class="label">${t('batchFormat')}</td><td>${spec.a?.batchFormat || ''}</td></tr>
+        <tr><td class="label">${t('producedIn')}</td><td>${spec.a?.producedIn || ''}</td></tr>
         <tr><td class="label">${t('batchDecode')}</td><td>${(spec.a?.batchDecode || '').replace(/\n/g, '<br>')}</td></tr>
-        <tr><td class="label">${t('prepMode')}</td><td>${spec.a?.prepMode || ''}</td></tr>
         <tr><td class="label">${t('intendedUse')}</td><td>${spec.a?.intendedUse || ''}</td></tr>
         <tr><td class="label">${t('storage')}</td><td>${spec.a?.storage || ''}</td></tr>
-        <tr><td class="label">${t('processDesc')}</td><td>${(spec.a?.processDesc || '').replace(/\n/g, '<br>')}</td></tr>
         <tr><td class="label">${t('envLabel')}</td><td>${(spec.a?.envLabel || '').replace(/\n/g, '<br>')}</td></tr>
         <tr><td class="label">${t('packMode')}</td><td>${spec.a?.packMode || ''}</td></tr>
       </table>

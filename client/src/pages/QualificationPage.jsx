@@ -15,7 +15,6 @@ import DeclarationCTab from "./qualification/DeclarationCTab";
 import ProductsTab from "./qualification/ProductsTab";
 import DossierTab from "./qualification/DossierTab";
 import SignedDossierTab from "./qualification/SignedDossierTab";
-import QualificationDocsTab from "./qualification/QualificationDocsTab";
 import RawMaterialsTab from "./qualification/RawMaterialsTab";
 import FoodFraudDefenseTab from "./qualification/FoodFraudDefenseTab";
 import MocaPackagingTab from "./qualification/MocaPackagingTab";
@@ -36,7 +35,6 @@ const EMPTY_QUAL_DATA = {
   fileB: {},
   fileC: [{ id: 1, tipologia: "Materia prima", denominazione: "", origine: "", shelfLife: "" }],
   fileD: { impegni: [] },
-  qualificationDocs: [],
   rawMaterials: [],
   foodFraudDefense: { foodFraud: { files: [], appliesTo: "" }, foodDefense: { files: [], appliesTo: "" } },
   mocaPackaging: { moca: [], technicalSpecs: [], migrationTests: [], ppwr: [] },
@@ -55,13 +53,12 @@ const TABS = [
   { id: "FILE_B", labelKey: "tabDichiarazioneB" },
   { id: "FILE_D", labelKey: "tabDichiarazioneC" },
   { id: "FILE_C", labelKey: "tabProdotti" },
-  { id: "PDF", labelKey: "tabDossier" },
-  { id: "SIGNED", labelKey: "tabDossierFirmato" },
-  { id: "DOCS", labelKey: "tabDocumentazione" },
   { id: "RAW_MATERIALS", labelKey: "tabMateriePrime" },
   { id: "FOOD_FRAUD_DEFENSE", labelKey: "tabFoodFraudDefense" },
   { id: "MOCA_PACKAGING", labelKey: "tabMocaPackaging" },
   { id: "HACCP", labelKey: "tabHaccp" },
+  { id: "PDF", labelKey: "tabDossier" },
+  { id: "SIGNED", labelKey: "tabDossierFirmato" },
 ];
 
 export default function QualificationPage({ onLogout }) {
@@ -94,7 +91,6 @@ export default function QualificationPage({ onLogout }) {
             fileB: { ...prev.fileB, ...(qData.qualData.fileB || {}) },
             fileC: qData.qualData.fileC?.length ? qData.qualData.fileC : prev.fileC,
             fileD: { ...prev.fileD, ...(qData.qualData.fileD || {}) },
-            qualificationDocs: qData.qualData.qualificationDocs || prev.qualificationDocs,
             rawMaterials: qData.qualData.rawMaterials || prev.rawMaterials,
             foodFraudDefense: { ...prev.foodFraudDefense, ...(qData.qualData.foodFraudDefense || {}) },
             mocaPackaging: { ...prev.mocaPackaging, ...(qData.qualData.mocaPackaging || {}) },
@@ -129,12 +125,12 @@ export default function QualificationPage({ onLogout }) {
   // NB: la qualifica e le specifiche tecniche condividono lo stesso record lato
   // server (PUT sovrascrive entrambi i campi): per non perdere productSpecs quando
   // si salva da quest'area, li ricarichiamo prima di scrivere.
-  // NB: il controllo di completezza obbligatorio (Documentazione Qualifica,
-  // Materie Prime, Food Fraud/Defense) NON vive qui: bloccherebbe ogni salvataggio
-  // da qualunque tab (Anagrafica, Contatti, ecc.), dato che ogni "Save" passa da
-  // qui con l'intero qualData. Il controllo è invece nel pulsante "Save" di
-  // ciascuna delle 3 tab interessate (vedi RawMaterialsTab/QualificationDocsTab/
-  // FoodFraudDefenseTab), così blocca solo chi salva esplicitamente da lì.
+  // NB: il controllo di completezza obbligatorio (Materie Prime, Food Fraud/
+  // Defense, HACCP) NON vive qui: bloccherebbe ogni salvataggio da qualunque
+  // tab (Anagrafica, Contatti, ecc.), dato che ogni "Save" passa da qui con
+  // l'intero qualData. Il controllo è invece nel pulsante "Save" di ciascuna
+  // delle tab interessate (vedi RawMaterialsTab/FoodFraudDefenseTab/HaccpTab),
+  // così blocca solo chi salva esplicitamente da lì.
   const saveQualDataPreservingSpecs = async (newData) => {
     if (!supplier) return false;
     try {
@@ -218,7 +214,7 @@ export default function QualificationPage({ onLogout }) {
 
         <div className="bg-white rounded-[4rem] shadow-2xl border border-slate-100 p-16 min-h-[600px]">
           {loading ? (
-            <div className="text-center text-slate-400 font-bold py-20">Caricamento...</div>
+            <div className="text-center text-slate-400 font-bold py-20">{t("loading")}</div>
           ) : (
             <>
               {activeTab === "ANAGRAFICA" && <AnagraficaTab {...tabProps} />}
@@ -228,13 +224,12 @@ export default function QualificationPage({ onLogout }) {
               {activeTab === "FILE_B" && <DeclarationBTab {...tabProps} />}
               {activeTab === "FILE_D" && <DeclarationCTab {...tabProps} />}
               {activeTab === "FILE_C" && <ProductsTab {...tabProps} />}
-              {activeTab === "PDF" && <DossierTab {...tabProps} />}
-              {activeTab === "SIGNED" && <SignedDossierTab {...tabProps} />}
-              {activeTab === "DOCS" && <QualificationDocsTab {...tabProps} />}
               {activeTab === "RAW_MATERIALS" && <RawMaterialsTab {...tabProps} />}
               {activeTab === "FOOD_FRAUD_DEFENSE" && <FoodFraudDefenseTab {...tabProps} />}
               {activeTab === "MOCA_PACKAGING" && <MocaPackagingTab {...tabProps} />}
               {activeTab === "HACCP" && <HaccpTab {...tabProps} />}
+              {activeTab === "PDF" && <DossierTab {...tabProps} />}
+              {activeTab === "SIGNED" && <SignedDossierTab {...tabProps} />}
             </>
           )}
         </div>

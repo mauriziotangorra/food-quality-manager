@@ -10,7 +10,7 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
     setSaving(true);
     try {
       const ok = await saveImmediate(qualData);
-      if (ok) showAlert("Modifiche salvate con successo!");
+      if (ok) showAlert(t("productsSaved"));
       // se ok è false, saveImmediate ha già mostrato l'errore
     } finally {
       setSaving(false);
@@ -51,13 +51,13 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
             disabled={saving}
             className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
           >
-            <Save size={16} /> {saving ? "Salvataggio..." : "Salva Prodotti"}
+            <Save size={16} /> {saving ? t("savingEllipsis") : t("saveProducts")}
           </button>
           <button
             onClick={addRow}
             className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
           >
-            <Plus size={18} /> Aggiungi Articolo
+            <Plus size={18} /> {t("addArticle")}
           </button>
         </div>
       </div>
@@ -65,11 +65,11 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
         <table className="w-full text-left min-w-[800px]">
           <thead className="text-[10px] uppercase font-black text-slate-400">
             <tr>
-              <th className="p-4">Tipologia</th>
-              <th className="p-4">Denominazione</th>
-              <th className="p-4">Origine</th>
-              <th className="p-4">Shelf Life</th>
-              <th className="p-4 text-center">Rimuovi</th>
+              <th className="p-4">{t("typology")}</th>
+              <th className="p-4">{t("colDenominazione")}</th>
+              <th className="p-4">{t("labelOrigine")}</th>
+              <th className="p-4">{t("labelTmc")}</th>
+              <th className="p-4 text-center">{t("colRemove")}</th>
             </tr>
           </thead>
           <tbody className="text-slate-900 space-y-2">
@@ -81,10 +81,10 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
                     value={p.tipologia || "Materia prima"}
                     onChange={(e) => updateRow(p.id, "tipologia", e.target.value)}
                   >
-                    <option>Materia prima</option>
-                    <option>Prodotto Finito</option>
-                    <option>Imballaggio</option>
-                    <option>Altro</option>
+                    <option value="Materia prima">{t("tipMateriaPrima")}</option>
+                    <option value="Prodotto Finito">{t("tipProdottoFinito")}</option>
+                    <option value="Imballaggio">{t("tipImballaggio")}</option>
+                    <option value="Altro">{t("tipAltro")}</option>
                   </select>
                 </td>
                 <td className="p-2">
@@ -92,7 +92,7 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
                     className="w-full p-4 rounded-xl border border-slate-100 shadow-sm bg-white font-bold text-xs"
                     value={p.denominazione || ""}
                     onChange={(e) => updateRow(p.id, "denominazione", e.target.value)}
-                    placeholder="Nome commerciale"
+                    placeholder={t("commercialNamePlaceholder")}
                   />
                 </td>
                 <td className="p-2">
@@ -100,7 +100,7 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
                     className="w-full p-4 rounded-xl border border-slate-100 shadow-sm bg-white font-bold text-xs"
                     value={p.origine || ""}
                     onChange={(e) => updateRow(p.id, "origine", e.target.value)}
-                    placeholder="Paese di origine"
+                    placeholder={t("originCountryPlaceholder")}
                   />
                 </td>
                 <td className="p-2">
@@ -108,7 +108,7 @@ export default function ProductsTab({ t, qualData, setQualData, saveImmediate })
                     className="w-full p-4 rounded-xl border border-slate-100 shadow-sm bg-white font-bold text-xs"
                     value={p.shelfLife || ""}
                     onChange={(e) => updateRow(p.id, "shelfLife", e.target.value)}
-                    placeholder="Es. 24 mesi"
+                    placeholder={t("shelfLifePlaceholder")}
                   />
                 </td>
                 <td className="p-2 rounded-r-2xl text-center">

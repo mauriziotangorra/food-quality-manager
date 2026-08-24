@@ -1,7 +1,9 @@
 import React from "react";
 import { FileCheck2, Save } from "lucide-react";
+import { useModal } from "../../hooks/useModal";
 
 export default function DeclarationCTab({ t, lang, qualData, setQualData, globalConfig, saveImmediate }) {
+  const { showAlert } = useModal();
   const langKey = lang.toLowerCase();
 
   const updateImpegno = (idx, checked) => {
@@ -20,7 +22,10 @@ export default function DeclarationCTab({ t, lang, qualData, setQualData, global
           <h3 className="text-5xl font-black uppercase tracking-tighter text-slate-900">{t("tabDichiarazioneC")}</h3>
         </div>
         <button
-          onClick={() => saveImmediate(qualData)}
+          onClick={async () => {
+            const ok = await saveImmediate(qualData);
+            if (ok) showAlert(t("alertSaved"));
+          }}
           className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
         >
           <Save size={16} /> {t("save")}
@@ -29,7 +34,7 @@ export default function DeclarationCTab({ t, lang, qualData, setQualData, global
 
       <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner">
         <div className="border-b-2 border-slate-200 pb-4 mb-8">
-          <h4 className="text-2xl font-black uppercase text-slate-800">Dichiarazione C</h4>
+          <h4 className="text-2xl font-black uppercase text-slate-800">{t("declCSimpleTitle")}</h4>
         </div>
         <div className="space-y-6">
           {(globalConfig.impegniC || []).map((imp, idx) => {
@@ -47,7 +52,7 @@ export default function DeclarationCTab({ t, lang, qualData, setQualData, global
             );
           })}
           {(globalConfig.impegniC || []).length === 0 && (
-            <p className="text-sm font-bold text-slate-400 text-center py-6">Nessuna dichiarazione presente al momento.</p>
+            <p className="text-sm font-bold text-slate-400 text-center py-6">{t("noDeclarationsAtMoment")}</p>
           )}
         </div>
       </div>
