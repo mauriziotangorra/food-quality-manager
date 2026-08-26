@@ -116,7 +116,7 @@ export default {
   look: "Apariencia/Color",
   taste: "Sabor",
 
-  sc_f: "f) DECLARACIÓN DE ALÉRGENOS",
+  allergenDeclarationTitle: "Declaración de Alérgenos",
   allergen: "Alérgeno",
   presence: "Presencia",
   traces: "Trazas",

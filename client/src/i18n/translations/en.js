@@ -116,7 +116,7 @@ export default {
   look: "Appearance/Color",
   taste: "Taste",
 
-  sc_f: "f) ALLERGEN DECLARATION",
+  allergenDeclarationTitle: "Allergen Declaration",
   allergen: "Allergen",
   presence: "Presence (Ingredient)",
   traces: "Traces Risk (Cross-Cont.)",

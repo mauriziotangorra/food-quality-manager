@@ -44,11 +44,6 @@ export function exportAllSpecsToCSV(productSpecs, lang) {
     csv += `Apparenza/Colore;${spec.e?.look || ''}\n`;
     csv += `Sapore;${spec.e?.taste || ''}\n`;
 
-    csv += '\nf) DICHIARAZIONE ALLERGENI\n';
-    (spec.f || []).forEach((r) => {
-      csv += `${r.it || ''};${r.presenza || ''};${r.tracce || ''};${r.note || ''}\n`;
-    });
-
     csv += '\ng) DICHIARAZIONE OGM\n';
     csv += `Contiene OGM?;${spec.g?.containsGmo || 'No'}\n`;
     csv += `Note;${(spec.g?.statement || '').replace(/\n/g, ' ')}\n`;

@@ -69,7 +69,7 @@ const EMPTY_QUAL_DATA = {
   anagrafica: {},
   contatti: {},
   certificazioni: DEFAULT_CERTIFICAZIONI.map((c) => ({ ...c })),
-  fileA: { impegni: [], allergenManagementPlan: [], contaminationRiskAssessment: [] },
+  fileA: { impegni: [], allergenManagementPlan: [], contaminationRiskAssessment: [], allergens: {} },
   fileB: {},
   fileC: [],
   signedDossier: { fileName: "", fileUrl: "" },
@@ -90,7 +90,7 @@ function setPath(obj, path, val) {
   return copy;
 }
 
-function buildNewSpec(globalConfig, t) {
+function buildNewSpec(t) {
   return {
     id: Date.now().toString(),
     familyId: Date.now().toString(),
@@ -115,7 +115,6 @@ function buildNewSpec(globalConfig, t) {
     ],
     d: Array.from({ length: 5 }, (_, i) => ({ id: i + 1, p: "", limite: "", risultato: "", conforme: "" })),
     e: { consistency: "", aroma: "", look: "", taste: "" },
-    f: (globalConfig.allergeni || []).map((all) => ({ id: all.id, it: all.it, presenza: t("no"), tracce: t("no"), note: "" })),
     g: { containsGmo: t("no"), statement: "" },
     log: {
       uvc: { ean: "", pesoNetto: "", pesoSgocc: "", tara: "", pesoLordo: "", l: "", p: "", h: "" },
@@ -191,7 +190,7 @@ export default function TechnicalPage({ onLogout }) {
 
   // --- Gestione elenco specifiche ---
   const addSpec = () => {
-    const spec = buildNewSpec(globalConfig, t);
+    const spec = buildNewSpec(t);
     setProductSpecs((prev) => [spec, ...prev]);
     setExpandedSpecId(spec.id);
   };
@@ -210,9 +209,7 @@ export default function TechnicalPage({ onLogout }) {
     setProductSpecs((prev) =>
       prev.map((s) => {
         if (s.id !== specId) return s;
-        let newRow;
-        if (table === "f") newRow = { id: Date.now(), it: "Nuovo Allergene", presenza: t("no"), tracce: t("no"), note: "" };
-        else newRow = { id: Date.now(), p: "", limite: "", risultato: "", conforme: "" };
+        const newRow = { id: Date.now(), p: "", limite: "", risultato: "", conforme: "" };
         return { ...s, [table]: [...s[table], newRow] };
       })
     );
@@ -372,9 +369,18 @@ export default function TechnicalPage({ onLogout }) {
         const rowId = NUTRITION_ROW_ID[key];
         if (val && rowId) updateSpecTable(specId, "c", rowId, "v", val);
       });
-      (selected.allergens || []).forEach((a) => {
-        updateSpecTable(specId, "f", a.id, "presenza", a.presenza);
-      });
+      // La dichiarazione allergeni e' unica per fornitore (Dichiarazione A, non
+      // per prodotto): la lettura dell'etichetta di QUESTO prodotto propone solo
+      // le presenze, senza toccare tracce/note gia' inserite manualmente.
+      if ((selected.allergens || []).length) {
+        setQualData((prev) => {
+          const nextAllergens = { ...(prev.fileA?.allergens || {}) };
+          selected.allergens.forEach((a) => {
+            nextAllergens[a.id] = { ...(nextAllergens[a.id] || {}), presenza: a.presenza };
+          });
+          return { ...prev, fileA: { ...prev.fileA, allergens: nextAllergens } };
+        });
+      }
     } else if (docType === "tecnica") {
       const FIELD_A_KEYS = [
         "legalName", "brand", "claim", "ingredients", "allergensNote", "tmc",
