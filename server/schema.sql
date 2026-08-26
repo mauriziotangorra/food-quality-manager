@@ -222,6 +222,20 @@ CREATE TABLE IF NOT EXISTS qual_file_a_files (
   INDEX idx_qfaf_role (supplier_id, role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Griglia allergeni unica per fornitore (presenza/tracce/note), spostata qui
+-- dalla Sezione F ("Dichiarazione Allergeni") della scheda tecnica prodotto:
+-- non e' la stessa cosa della deprecata qual_allergen_answers qui sopra
+-- (quella aveva "gestione" al posto di "tracce" ed era per-prodotto).
+CREATE TABLE IF NOT EXISTS qual_file_a_allergens (
+  supplier_id VARCHAR(64) NOT NULL,
+  allergen_id VARCHAR(100) NOT NULL,
+  presenza VARCHAR(100) NULL,
+  tracce VARCHAR(100) NULL,
+  note TEXT NULL,
+  PRIMARY KEY (supplier_id, allergen_id),
+  CONSTRAINT fk_qfaa_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS qual_prodotti (
   supplier_id VARCHAR(64) NOT NULL,
   id VARCHAR(64) NOT NULL,

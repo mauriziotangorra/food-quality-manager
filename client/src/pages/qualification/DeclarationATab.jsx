@@ -8,9 +8,13 @@ const DOC_SLOTS = [
   { key: "contaminationRiskAssessment", labelKey: "contaminationRiskAssessment" },
 ];
 
+const ALLERGEN_STATUS_COLOR = (val) =>
+  !val || val === "No" ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-red-50 text-red-700 border-red-300";
+
 export default function DeclarationATab({ t, lang, qualData, setQualData, globalConfig, supplierId, saveImmediate }) {
   const { showAlert, showConfirm } = useModal();
   const langKey = lang.toLowerCase();
+  const allergens = qualData.fileA?.allergens || {};
 
   const updateImpegno = (idx, checked) => {
     setQualData((prev) => {
@@ -18,6 +22,16 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
       impegni[idx] = checked;
       return { ...prev, fileA: { ...prev.fileA, impegni } };
     });
+  };
+
+  const updateAllergen = (allergenId, patch) => {
+    setQualData((prev) => ({
+      ...prev,
+      fileA: {
+        ...prev.fileA,
+        allergens: { ...(prev.fileA?.allergens || {}), [allergenId]: { ...(prev.fileA?.allergens?.[allergenId] || {}), ...patch } },
+      },
+    }));
   };
 
   const handleUpload = async (key, e) => {
@@ -126,6 +140,61 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner space-y-6 overflow-x-auto">
+        <div className="border-b-2 border-slate-200 pb-4">
+          <h4 className="text-2xl font-black uppercase text-slate-800">{t("allergenDeclarationTitle")}</h4>
+        </div>
+        <div className="min-w-[640px]">
+          <div className="grid grid-cols-12 gap-2 text-[8px] font-black text-slate-400 px-1 uppercase text-center">
+            <div className="col-span-3 text-left">{t("allergen")}</div>
+            <div className="col-span-3">{t("presence")}</div>
+            <div className="col-span-3">{t("traces")}</div>
+            <div className="col-span-3 text-left">{t("notes")}</div>
+          </div>
+          <div className="divide-y divide-slate-200">
+            {(globalConfig.allergeni || []).map((all) => {
+              const row = allergens[all.id] || {};
+              return (
+                <div key={all.id} className="grid grid-cols-12 gap-4 items-center py-2">
+                  <div className="col-span-3 text-[9px] font-black uppercase text-slate-700 leading-tight text-left">{all[langKey] || all.it}</div>
+                  <div className="col-span-3">
+                    <select
+                      className={`w-full p-2 border rounded text-[9px] font-bold outline-none focus:border-blue-500 transition-colors ${ALLERGEN_STATUS_COLOR(row.presenza)}`}
+                      value={row.presenza || "No"}
+                      onChange={(e) => updateAllergen(all.id, { presenza: e.target.value })}
+                    >
+                      <option value="No">No</option>
+                      <option value="Sì (Ingrediente)">Sì (Ingrediente)</option>
+                      <option value="Sì (Derivato/Additivo)">Sì (Derivato/Additivo)</option>
+                    </select>
+                  </div>
+                  <div className="col-span-3">
+                    <select
+                      className={`w-full p-2 border rounded text-[9px] font-bold outline-none focus:border-blue-500 transition-colors ${ALLERGEN_STATUS_COLOR(row.tracce)}`}
+                      value={row.tracce || "No"}
+                      onChange={(e) => updateAllergen(all.id, { tracce: e.target.value })}
+                    >
+                      <option value="No">No</option>
+                      <option value="Possibile (Stessa linea)">Possibile (Stessa linea)</option>
+                      <option value="Possibile (Stesso stabilimento)">Possibile (Stesso stab.)</option>
+                    </select>
+                  </div>
+                  <div className="col-span-3">
+                    <input
+                      type="text"
+                      className="w-full p-2 bg-white border border-slate-200 rounded text-[9px] font-bold outline-none focus:border-blue-500"
+                      placeholder={t("notesPlaceholder")}
+                      value={row.note || ""}
+                      onChange={(e) => updateAllergen(all.id, { note: e.target.value })}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

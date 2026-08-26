@@ -2,16 +2,15 @@ import React from "react";
 import {
   ChevronDown, ChevronUp, Trash2, Save, Edit3, FileClock, History, Download, Printer,
   FileUp, Truck, Microscope, FlaskRound, Image as ImageIcon, ShoppingBag, Scale, Apple,
-  UtensilsCrossed, AlertCircle, Dna, Package, Check, Info, FileText,
+  UtensilsCrossed, Dna, Package, Check, Info, FileText,
 } from "lucide-react";
 
 export default function SpecEditor({
-  spec, isExpanded, onToggleExpand, t, lang, globalConfig, isTestUser,
+  spec, isExpanded, onToggleExpand, t, isTestUser,
   onUpdateField, onUpdateTable, onAddTableRow, onDelete, onSave, onToggleEdit, onRevise,
   onShowHistory, onExportAll, onExportPdf, onFilesUpload, onRemoveFile, onBrandLogoUpload,
 }) {
   const disabled = spec.isSaved;
-  const langKey = lang.toLowerCase();
 
   return (
     <div className={`bg-white rounded-[3rem] shadow-xl overflow-hidden border-2 transition-all ${spec.isObsolete ? "border-red-500 opacity-60" : spec.isSaved ? "border-emerald-500" : "border-slate-200"}`}>
@@ -134,7 +133,6 @@ export default function SpecEditor({
             <div className="space-y-8">
               <SectionD t={t} spec={spec} disabled={disabled} onUpdateTable={onUpdateTable} onAddTableRow={onAddTableRow} />
               <SectionE t={t} spec={spec} disabled={disabled} onUpdateField={onUpdateField} />
-              <SectionF t={t} lang={langKey} spec={spec} disabled={disabled} globalConfig={globalConfig} onUpdateTable={onUpdateTable} />
               <SectionG t={t} spec={spec} disabled={disabled} onUpdateField={onUpdateField} />
               <SectionH t={t} spec={spec} disabled={disabled} onUpdateField={onUpdateField} />
             </div>
@@ -307,50 +305,6 @@ function SectionE({ t, spec, disabled, onUpdateField }) {
             <input disabled={disabled} className="w-full p-2 bg-white rounded-lg text-[10px] font-bold border-none shadow-sm disabled:opacity-70 disabled:bg-slate-100" value={spec.e?.[f] || ""} onChange={(e) => onUpdateField(`e.${f}`, e.target.value)} />
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function SectionF({ t, lang, spec, disabled, globalConfig, onUpdateTable }) {
-  const getColor = (val) => (!val || val === t("no") ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-red-50 text-red-700 border-red-300");
-  return (
-    <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-red-100 shadow-inner space-y-4 overflow-x-auto relative">
-      <div className="flex items-center justify-between border-b border-red-200 pb-2">
-        <div className="flex items-center gap-4 text-red-700 font-black uppercase text-xs"><AlertCircle size={18} /> {t("sc_f")}</div>
-      </div>
-      <div className="grid grid-cols-12 gap-2 text-[8px] font-black text-slate-400 px-1 uppercase text-center min-w-full">
-        <div className="col-span-3 text-left">{t("allergen")}</div>
-        <div className="col-span-3">{t("presence")}</div>
-        <div className="col-span-3">{t("traces")}</div>
-        <div className="col-span-3 text-left">{t("notes")}</div>
-      </div>
-      <div className="divide-y divide-slate-200 min-w-full">
-        {(globalConfig.allergeni || []).map((all) => {
-          const row = spec.f?.find((r) => r.id === all.id);
-          return (
-            <div key={all.id} className="grid grid-cols-12 gap-4 items-center py-2 group">
-              <div className="col-span-3 text-[9px] font-black uppercase text-slate-700 leading-tight text-left">{all[lang] || all.it}</div>
-              <div className="col-span-3">
-                <select disabled={disabled} className={`w-full p-2 border rounded text-[9px] font-bold outline-none disabled:opacity-70 focus:border-blue-500 transition-colors ${getColor(row?.presenza)}`} value={row?.presenza || t("no")} onChange={(e) => onUpdateTable("f", all.id, "presenza", e.target.value)}>
-                  <option value={t("no")}>{t("no")}</option>
-                  <option value="Sì (Ingrediente)">Sì (Ingrediente)</option>
-                  <option value="Sì (Derivato/Additivo)">Sì (Derivato/Additivo)</option>
-                </select>
-              </div>
-              <div className="col-span-3">
-                <select disabled={disabled} className={`w-full p-2 border rounded text-[9px] font-bold outline-none disabled:opacity-70 focus:border-blue-500 transition-colors ${getColor(row?.tracce)}`} value={row?.tracce || t("no")} onChange={(e) => onUpdateTable("f", all.id, "tracce", e.target.value)}>
-                  <option value={t("no")}>{t("no")}</option>
-                  <option value="Possibile (Stessa linea)">Possibile (Stessa linea)</option>
-                  <option value="Possibile (Stesso stabilimento)">Possibile (Stesso stab.)</option>
-                </select>
-              </div>
-              <div className="col-span-3">
-                <input disabled={disabled} type="text" className="w-full p-2 bg-white border border-slate-200 rounded text-[9px] font-bold outline-none disabled:opacity-70 focus:border-blue-500" placeholder="Note..." value={row?.note || ""} onChange={(e) => onUpdateTable("f", all.id, "note", e.target.value)} />
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

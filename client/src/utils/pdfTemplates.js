@@ -187,6 +187,15 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
           <td>${(qualData.fileA?.contaminationRiskAssessment || []).length ? t('loaded') : t('missing')}</td>
         </tr>
       </table>
+      <table style="margin-top:10px;">
+        <tr><th style="width:40%">${t('allergen')}</th><th style="width:15%">${t('presence')}</th><th style="width:20%">${t('traces')}</th><th style="width:25%">${t('notes')}</th></tr>
+        ${(globalConfig.allergeni || []).map((all) => {
+          const langKey = lang.toLowerCase();
+          const row = qualData.fileA?.allergens?.[all.id] || {};
+          const allergenName = all[langKey] || all.it || '';
+          return `<tr><td><b>${allergenName}</b></td><td>${row.presenza || 'No'}</td><td>${row.tracce || 'No'}</td><td>${row.note || ''}</td></tr>`;
+        }).join('')}
+      </table>
     </div>
 
     <div class="section">
@@ -223,7 +232,7 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
 }
 
 // --- 2) SPECIFICA TECNICA PRODOTTO (Tab 6, standard / IFP) ---
-export function generateSpecPDF({ spec, qualData, globalConfig, lang, t, masterLogoUrl, pdfType = 'standard' }) {
+export function generateSpecPDF({ spec, qualData, lang, t, masterLogoUrl, pdfType = 'standard' }) {
   const masterLogoAbs = toAbsoluteUrl(masterLogoUrl);
   const brandLogoAbs = toAbsoluteUrl(spec.a?.brandLogo);
   const pdfPlace = qualData.pdfPlace || '_________________';
@@ -338,18 +347,6 @@ export function generateSpecPDF({ spec, qualData, globalConfig, lang, t, masterL
         <tr><td class="label">${t('aroma')}</td><td>${spec.e?.aroma || ''}</td></tr>
         <tr><td class="label">${t('look')}</td><td>${spec.e?.look || ''}</td></tr>
         <tr><td class="label">${t('taste')}</td><td>${spec.e?.taste || ''}</td></tr>
-      </table>
-    </div>
-
-    <div class="section">
-      <div class="title">${t('sc_f')}</div>
-      <table>
-        <tr><th style="width:40%">${t('allergen')}</th><th style="width:15%">${t('presence')}</th><th style="width:20%">${t('traces')}</th><th style="width:25%">${t('notes')}</th></tr>
-        ${(spec.f || []).map((r) => {
-          const langKey = lang.toLowerCase();
-          const allergenName = r.it || ((globalConfig.allergeni || []).find((a) => a.id === r.id) || {})[langKey] || r.it || '';
-          return `<tr><td><b>${allergenName}</b></td><td>${r.presenza || ''}</td><td>${r.tracce || ''}</td><td>${r.note || ''}</td></tr>`;
-        }).join('')}
       </table>
     </div>
 

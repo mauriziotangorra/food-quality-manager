@@ -52,7 +52,7 @@ async function getQualData(supplierId) {
 
   const [
     [anagraficaRows], [contattiRows], [certRows],
-    [impegniARows], [impegniBRows], [declCAnswerRows], [declCFileRows], [fileAFileRows],
+    [impegniARows], [impegniBRows], [declCAnswerRows], [declCFileRows], [fileAFileRows], [fileAAllergenRows],
     [prodottiRows],
     [rmRows], [rmFileRows],
     [ffdRows], [ffdFileRows],
@@ -68,6 +68,7 @@ async function getQualData(supplierId) {
     pool.query('SELECT * FROM qual_declaration_c_answers WHERE supplier_id = ?', [supplierId]),
     pool.query('SELECT * FROM qual_declaration_c_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_file_a_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
+    pool.query('SELECT * FROM qual_file_a_allergens WHERE supplier_id = ?', [supplierId]),
     pool.query('SELECT * FROM qual_prodotti WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_raw_materials WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_raw_material_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
@@ -80,7 +81,7 @@ async function getQualData(supplierId) {
 
   const hasAnyData = [
     anagraficaRows, contattiRows, certRows, impegniARows, impegniBRows, declCAnswerRows,
-    fileAFileRows, prodottiRows, rmRows, ffdRows, mpFileRows, haccpFileRows, dossierRows
+    fileAFileRows, fileAAllergenRows, prodottiRows, rmRows, ffdRows, mpFileRows, haccpFileRows, dossierRows
   ].some((rows) => rows.length > 0);
   if (!hasAnyData) return null;
 
@@ -104,9 +105,14 @@ async function getQualData(supplierId) {
   const checkedAIds = new Set(impegniARows.map((r) => r.impegno_id));
   const fileAFilesByRole = { allergenManagementPlan: [], contaminationRiskAssessment: [] };
   fileAFileRows.forEach((r) => { fileAFilesByRole[r.role].push({ name: r.name || '', url: r.url || '' }); });
+  const allergens = {};
+  fileAAllergenRows.forEach((r) => {
+    allergens[r.allergen_id] = { presenza: r.presenza || '', tracce: r.tracce || '', note: r.note || '' };
+  });
   const fileA = {
     impegni: boolArrayFromCheckedIds(impegniAIds, checkedAIds),
-    ...Object.fromEntries(FILE_A_ROLES.map((role) => [role, fileAFilesByRole[role]]))
+    ...Object.fromEntries(FILE_A_ROLES.map((role) => [role, fileAFilesByRole[role]])),
+    allergens
   };
 
   const fileB = {};
@@ -182,7 +188,7 @@ async function saveQualData(supplierId, qualData) {
 
   const deleteTables = [
     'qual_anagrafica', 'qual_contatti', 'qual_certificazioni', 'qual_impegni_a', 'qual_impegni_b',
-    'qual_declaration_c_answers', 'qual_declaration_c_files', 'qual_file_a_files', 'qual_prodotti',
+    'qual_declaration_c_answers', 'qual_declaration_c_files', 'qual_file_a_files', 'qual_file_a_allergens', 'qual_prodotti',
     'qual_raw_materials', 'qual_raw_material_files',
     'qual_food_fraud_defense', 'qual_food_fraud_defense_files', 'qual_moca_packaging_files',
     'qual_haccp_files', 'qual_dossier'
@@ -266,6 +272,17 @@ async function saveQualData(supplierId, qualData) {
           [supplierId, role, f.name || '', f.url || '', j]
         );
       }
+    }
+
+    const fileAAllergens = fileA.allergens || {};
+    for (const [allergenId, entry] of Object.entries(fileAAllergens)) {
+      const en = entry || {};
+      if (!en.presenza && !en.tracce && !en.note) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await conn.query(
+        'INSERT INTO qual_file_a_allergens (supplier_id, allergen_id, presenza, tracce, note) VALUES (?, ?, ?, ?, ?)',
+        [supplierId, allergenId, en.presenza || '', en.tracce || '', en.note || '']
+      );
     }
 
     const fileC = Array.isArray(qualData.fileC) ? qualData.fileC : [];

@@ -31,7 +31,7 @@ const EMPTY_QUAL_DATA = {
     logistica: { nome: "", email: "", tel: "" },
   },
   certificazioni: DEFAULT_CERTIFICAZIONI.map((c) => ({ ...c })),
-  fileA: { impegni: [], allergenManagementPlan: [], contaminationRiskAssessment: [] },
+  fileA: { impegni: [], allergenManagementPlan: [], contaminationRiskAssessment: [], allergens: {} },
   fileB: {},
   fileC: [{ id: 1, tipologia: "Materia prima", denominazione: "", origine: "", shelfLife: "" }],
   fileD: { answers: {} },
