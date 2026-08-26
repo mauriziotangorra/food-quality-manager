@@ -97,6 +97,12 @@ const RESPONSE_SCHEMAS = {
         }
       }
     }
+  },
+  firma: {
+    type: Type.OBJECT,
+    properties: {
+      hasSignature: { type: Type.STRING, enum: ['Sì', 'No'] }
+    }
   }
 };
 
@@ -130,7 +136,11 @@ const BASE_PROMPTS = {
     "le caratteristiche organolettiche (consistenza, aroma, aspetto/colore, sapore); " +
     'e la dichiarazione OGM (se il prodotto contiene OGM: "Sì" o "No", più eventuale testo della dichiarazione). ' +
     "NON estrarre parametri di analisi microbiologica o chimico-fisica anche se presenti nel documento: quelli si caricano da altri documenti dedicati. " +
-    "Rispondi SOLO con un oggetto JSON conforme allo schema fornito. Se un campo non è determinabile, lascialo come stringa vuota o omettilo. Non inventare dati."
+    "Rispondi SOLO con un oggetto JSON conforme allo schema fornito. Se un campo non è determinabile, lascialo come stringa vuota o omettilo. Non inventare dati.",
+  firma:
+    "Sei un assistente che controlla se un documento PDF caricato come 'dossier di qualifica firmato' contiene effettivamente una firma. " +
+    "Cerca in tutte le pagine una firma manoscritta, un timbro aziendale, o una firma digitale/elettronica (es. blocco di firma di DocuSign, Adobe Sign o simili). " +
+    'Rispondi SOLO con un oggetto JSON conforme allo schema fornito: hasSignature vale "Sì" se hai trovato una firma o un timbro chiaramente visibile su almeno una pagina, "No" altrimenti o se non sei sicuro.'
 };
 
 function buildPrompt(docType, allergens) {

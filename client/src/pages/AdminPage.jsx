@@ -7,7 +7,7 @@ import { api } from "../services/api";
 const EMPTY_FORM = { id: null, name: "", status: "active", qualPass: "", techPass: "" };
 
 const NEW_IMPEGNO_A = { id: null, it: "", en: "", fr: "", es: "" };
-const NEW_IMPEGNO_C = { id: null, it: "", en: "", fr: "", es: "" };
+const NEW_IMPEGNO_C = { id: null, it: "", en: "", fr: "", es: "", section: "", allow_attachment: 0 };
 const NEW_IMPEGNO_B = {
   id: null,
   title_it: "", desc_it: "",
@@ -420,12 +420,29 @@ export default function AdminPage({ onLogout }) {
                   <div className="space-y-4">
                     {globalConfig.impegniC.map((imp) => (
                       <div key={imp.id} className="flex items-start gap-4 group bg-slate-50 p-5 rounded-2xl border border-slate-100 relative">
-                        <textarea
-                          className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
-                          value={imp.it}
-                          onChange={(e) => updateList("impegniC", imp.id, { it: e.target.value })}
-                          placeholder={t("declTextPlaceholderIt")}
-                        />
+                        <div className="w-full space-y-2">
+                          <input
+                            className="w-full p-2 border border-slate-200 rounded-xl text-[10px] font-black uppercase text-amber-700 outline-none focus:border-blue-500 bg-white"
+                            value={imp.section || ""}
+                            onChange={(e) => updateList("impegniC", imp.id, { section: e.target.value })}
+                            placeholder={t("declCSectionPlaceholder")}
+                          />
+                          <textarea
+                            className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
+                            value={imp.it}
+                            onChange={(e) => updateList("impegniC", imp.id, { it: e.target.value })}
+                            placeholder={t("declTextPlaceholderIt")}
+                          />
+                          <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 cursor-pointer w-fit">
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 accent-amber-600"
+                              checked={Boolean(imp.allow_attachment)}
+                              onChange={(e) => updateList("impegniC", imp.id, { allow_attachment: e.target.checked ? 1 : 0 })}
+                            />
+                            {t("declCAllowAttachment")}
+                          </label>
+                        </div>
                         <button
                           onClick={() => removeFromList("impegniC", imp.id, t("confirmDeleteDeclaration"))}
                           className="text-red-400 hover:text-red-600 shrink-0 p-2"

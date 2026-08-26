@@ -21,7 +21,9 @@ const MIME_BY_EXT = {
 // I tipi di upload di AP 05.1.1 (Product Specification) che hanno un mapping
 // verso campi del form; "foto" (foto prodotto) resta un upload semplice,
 // senza estrazione AI (nessun campo strutturato da leggere da una foto generica).
-const DOC_TYPES = new Set(['logistica', 'microbiologici', 'chimici', 'etichetta', 'tecnica']);
+// "firma" non estrae campi: verifica solo se il dossier firmato caricato
+// sembra contenere una firma (riepilogo pre-invio, tab Dossier Firmato).
+const DOC_TYPES = new Set(['logistica', 'microbiologici', 'chimici', 'etichetta', 'tecnica', 'firma']);
 
 // Risolve un fileUrl ("/uploads/<scope>/<file>") nel path assoluto sul disco,
 // verificando che resti dentro UPLOAD_ROOT e che il richiedente possa

@@ -79,3 +79,88 @@ export function checkHaccpCompleteness(qualData) {
   }
   return buildResult(lines);
 }
+
+// ---------------------------------------------------------------------
+// Riepilogo pre-invio (tab "Dossier Firmato"): raccoglie gli stessi tipi di
+// controllo qui sopra più quelli delle tab senza un proprio pulsante "Save"
+// bloccante (Anagrafica, Contatti, Certificazioni, Dichiarazioni A/B/C,
+// Prodotti), in un unico elenco per sezione. È SOLO un avviso: non impedisce
+// il caricamento del dossier firmato, perché non tutte le sezioni si
+// applicano a ogni fornitore (es. MOCA/Packaging), quindi un blocco rigido
+// finirebbe per impedire l'invio a chi non ha nulla da mettere in quelle
+// sezioni. MOCA/Packaging è per questo escluso dal riepilogo.
+// ---------------------------------------------------------------------
+
+const DEPTS = ['sales', 'marketing', 'qualita', 'amministrazione', 'customer', 'logistica'];
+const DEPT_LABELS = {
+  sales: 'Commerciale', marketing: 'Marketing', qualita: 'Qualità',
+  amministrazione: 'Amministrazione', customer: 'Customer Service', logistica: 'Logistica',
+};
+
+function section(tabId, labelKey, lines) {
+  return lines.length ? { tabId, labelKey, issues: lines } : null;
+}
+
+export function getFullChecklist(qualData, globalConfig) {
+  const gc = globalConfig || {};
+  const sections = [];
+
+  const a = qualData.anagrafica || {};
+  const missingA = ['rs', 'piva', 'sede', 'citta', 'provincia', 'cap', 'nazione'].filter((k) => !a[k]);
+  sections.push(section('ANAGRAFICA', 'tabAnagrafica', missingA.length ? [`campi anagrafici mancanti: ${missingA.join(', ')}.`] : []));
+
+  const contatti = qualData.contatti || {};
+  const incompleteDepts = DEPTS.filter((d) => !contatti[d]?.nome || !contatti[d]?.email).map((d) => DEPT_LABELS[d]);
+  sections.push(section('CONTATTI', 'tabContatti', incompleteDepts.length ? [`contatti incompleti: ${incompleteDepts.join(', ')}.`] : []));
+
+  const missingCerts = (qualData.certificazioni || []).filter((c) => c.type && !c.fileUrl).map((c) => c.type);
+  sections.push(section('CERTIFICAZIONI', 'tabCertificazioni', missingCerts.length ? [`documenti mancanti: ${missingCerts.join(', ')}.`] : []));
+
+  const fileA = qualData.fileA || {};
+  const impegniA = gc.impegniA || [];
+  const uncheckedA = impegniA.filter((_, idx) => !fileA.impegni?.[idx]).map((imp) => imp.it || imp.en || `#${imp.id}`);
+  const fileALines = [];
+  if (uncheckedA.length) fileALines.push(`impegni non confermati: ${uncheckedA.length} su ${impegniA.length}.`);
+  if (!fileA.allergenManagementPlan?.length) fileALines.push('piano di gestione allergeni mancante.');
+  if (!fileA.contaminationRiskAssessment?.length) fileALines.push('valutazione del rischio di contaminazione mancante.');
+  sections.push(section('FILE_A', 'tabDichiarazioneA', fileALines));
+
+  const fileB = qualData.fileB || {};
+  const impegniB = gc.impegniB || [];
+  const uncheckedB = impegniB.filter((imp) => !fileB[imp.id]).map((imp) => imp.title_it || imp.title_en || `#${imp.id}`);
+  sections.push(section('FILE_B', 'tabDichiarazioneB', uncheckedB.length ? [`impegni non confermati: ${uncheckedB.length} su ${impegniB.length}.`] : []));
+
+  const declAnswers = qualData.fileD?.answers || {};
+  const impegniC = gc.impegniC || [];
+  const unansweredC = impegniC.filter((imp) => !declAnswers[imp.id]?.answer).map((imp) => imp.it || imp.en || `#${imp.id}`);
+  sections.push(section('FILE_D', 'tabDichiarazioneC', unansweredC.length ? [`domande senza risposta: ${unansweredC.length} su ${impegniC.length}.`] : []));
+
+  const missingProducts = (qualData.fileC || []).filter((p) => !p.denominazione).length;
+  sections.push(section('FILE_C', 'tabProdotti', missingProducts ? [`${missingProducts} prodotto/i senza denominazione.`] : []));
+
+  const rmLines = [];
+  (qualData.rawMaterials || []).forEach((m, idx) => {
+    const issues = getRawMaterialIssues(m);
+    if (issues.length) rmLines.push(`"${m.name || `Materia Prima #${idx + 1}`}": ${issues.join(', ')}.`);
+  });
+  sections.push(section('RAW_MATERIALS', 'tabMateriePrime', rmLines));
+
+  const ffdLines = [];
+  const ffd = qualData.foodFraudDefense || {};
+  const ffdLabels = { foodFraud: 'Food Fraud', foodDefense: 'Food Defense' };
+  for (const key of Object.keys(ffdLabels)) {
+    const issues = getFoodFraudDefenseIssues(ffd[key] || {});
+    if (issues.length) ffdLines.push(`${ffdLabels[key]}: ${issues.join(', ')}.`);
+  }
+  sections.push(section('FOOD_FRAUD_DEFENSE', 'tabFoodFraudDefense', ffdLines));
+
+  const haccpLines = [];
+  const haccp = qualData.haccp || {};
+  for (const key of Object.keys(HACCP_SLOT_LABELS)) {
+    const issues = getHaccpSlotIssues(haccp[key]);
+    if (issues.length) haccpLines.push(`${HACCP_SLOT_LABELS[key]}: ${issues.join(', ')}.`);
+  }
+  sections.push(section('HACCP', 'tabHaccp', haccpLines));
+
+  return sections.filter(Boolean);
+}

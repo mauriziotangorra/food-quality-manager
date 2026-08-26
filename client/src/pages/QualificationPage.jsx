@@ -34,7 +34,7 @@ const EMPTY_QUAL_DATA = {
   fileA: { impegni: [], allergenManagementPlan: [], contaminationRiskAssessment: [] },
   fileB: {},
   fileC: [{ id: 1, tipologia: "Materia prima", denominazione: "", origine: "", shelfLife: "" }],
-  fileD: { impegni: [] },
+  fileD: { answers: {} },
   rawMaterials: [],
   foodFraudDefense: { foodFraud: { files: [], appliesTo: "" }, foodDefense: { files: [], appliesTo: "" } },
   mocaPackaging: { moca: [], technicalSpecs: [], migrationTests: [], ppwr: [] },
