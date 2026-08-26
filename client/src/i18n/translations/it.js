@@ -326,6 +326,9 @@ export default {
   logisticsProcessTitle: "Gestione Processi e Flussi Logistici",
   noParametersAtMoment: "Nessun parametro presente al momento.",
   declCSimpleTitle: "Dichiarazione C",
+  declCSectionPlaceholder: "Sezione (opzionale, es. TRASPORTO / LOGISTICA)...",
+  declCAllowAttachment: "Consenti Allegato",
+  notesPlaceholder: "Note aggiuntive...",
   noDeclarationsAtMoment: "Nessuna dichiarazione presente al momento.",
 
   // Certificazioni
@@ -364,6 +367,9 @@ export default {
   signedDossierHint: "Stampa il dossier dal Tab 12, firmalo, scansionalo e ricaricalo qui per completare ufficialmente l'iter di qualifica.",
   saveDossierBtn: "Salva il Dossier",
   selectSignedPdf: "Seleziona PDF Firmato",
+  preSubmitChecklistTitle: "Riepilogo prima dell'invio",
+  preSubmitChecklistOk: "Tutte le sezioni risultano complete.",
+  preSubmitSignatureWarning: "Il documento caricato non sembra contenere una firma: verifica di aver caricato la versione firmata.",
   dossierSaved: "Dossier salvato con successo!",
 
   // Documentazione Qualifica

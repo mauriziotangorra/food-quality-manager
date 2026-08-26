@@ -13,7 +13,7 @@ async function getGlobalSettings() {
   const [impegniB] = await pool.query(
     'SELECT id, title_it, desc_it, title_en, desc_en, title_fr, desc_fr, title_es, desc_es FROM impegni_b ORDER BY sort_order ASC'
   );
-  const [impegniC] = await pool.query('SELECT id, it, en, fr, es FROM impegni_c ORDER BY sort_order ASC');
+  const [impegniC] = await pool.query('SELECT id, it, en, fr, es, section, allow_attachment FROM impegni_c ORDER BY sort_order ASC');
   const [allergeni] = await pool.query('SELECT id, it, en, fr, es FROM allergens ORDER BY sort_order ASC');
 
   return { logo, templates: { allergeni, impegniA, impegniB, impegniC } };
@@ -55,7 +55,12 @@ async function saveGlobalSettings(patch) {
         );
       }
       if (Array.isArray(t.impegniC)) {
-        await replaceSimpleList(conn, 'impegni_c', ['id', 'it', 'en', 'fr', 'es', 'sort_order'], t.impegniC);
+        await replaceSimpleList(
+          conn,
+          'impegni_c',
+          ['id', 'it', 'en', 'fr', 'es', 'section', 'allow_attachment', 'sort_order'],
+          t.impegniC.map((item) => ({ ...item, allow_attachment: item.allow_attachment ? 1 : 0 }))
+        );
       }
       if (Array.isArray(t.allergeni)) {
         await replaceSimpleList(conn, 'allergens', ['id', 'it', 'en', 'fr', 'es', 'sort_order'], t.allergeni);

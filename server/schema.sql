@@ -91,11 +91,23 @@ CREATE TABLE IF NOT EXISTS impegni_b (
   sort_order INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Dichiarazione C: dal blocco "questionario fornitore" (domanda + risposta
+-- Sì/No/N-A + note + allegato opzionale). "section" raggruppa domande
+-- consecutive sotto un'intestazione comune (es. "TRASPORTO / LOGISTICA"),
+-- come nei documenti questionario di riferimento; "allow_attachment"
+-- decide se la domanda mostra uno slot di upload al fornitore.
 CREATE TABLE IF NOT EXISTS impegni_c (
   id VARCHAR(100) NOT NULL PRIMARY KEY,
   it TEXT, en TEXT, fr TEXT, es TEXT,
+  section TEXT NULL,
+  allow_attachment TINYINT(1) NOT NULL DEFAULT 0,
   sort_order INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- NB: se la tabella impegni_c esisteva già prima di questa modifica,
+-- CREATE TABLE IF NOT EXISTS sopra non aggiunge le nuove colonne (MySQL non
+-- supporta "ADD COLUMN IF NOT EXISTS" come MariaDB) — vedi ensureColumns()
+-- in initDb.js, che le aggiunge in modo idempotente via information_schema.
 
 CREATE TABLE IF NOT EXISTS allergens (
   id VARCHAR(100) NOT NULL PRIMARY KEY,
@@ -154,11 +166,37 @@ CREATE TABLE IF NOT EXISTS qual_impegni_b (
   CONSTRAINT fk_qib_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- DEPRECATED: Dichiarazione C non usa piu' il semplice checkbox
+-- accetta/non-accetta (sostituito dal questionario Sì/No/N-A qui sotto).
+-- Tabella non piu' letta ne' scritta dall'app; mantenuta solo come
+-- snapshot storico, non droppare.
 CREATE TABLE IF NOT EXISTS qual_impegni_c (
   supplier_id VARCHAR(64) NOT NULL,
   impegno_id VARCHAR(100) NOT NULL,
   PRIMARY KEY (supplier_id, impegno_id),
   CONSTRAINT fk_qic_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Risposte del fornitore al questionario Dichiarazione C: una riga per
+-- domanda, con risposta (Sì/No/N/A), note libere ed eventuali file allegati
+-- (solo per le domande con allow_attachment=1 sul template impegni_c).
+CREATE TABLE IF NOT EXISTS qual_declaration_c_answers (
+  supplier_id VARCHAR(64) NOT NULL,
+  impegno_id VARCHAR(100) NOT NULL,
+  answer VARCHAR(10) NULL,
+  notes TEXT NULL,
+  PRIMARY KEY (supplier_id, impegno_id),
+  CONSTRAINT fk_qdca_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS qual_declaration_c_files (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  supplier_id VARCHAR(64) NOT NULL,
+  impegno_id VARCHAR(100) NOT NULL,
+  name VARCHAR(500), url VARCHAR(500),
+  sort_order INT NOT NULL DEFAULT 0,
+  CONSTRAINT fk_qdcf_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+  INDEX idx_qdcf_impegno (supplier_id, impegno_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- DEPRECATED: la griglia allergeni e' stata rimossa dalla Dichiarazione A

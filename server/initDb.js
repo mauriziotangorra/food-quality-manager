@@ -5,6 +5,19 @@ const mysql = require('mysql2/promise');
 
 const SALT_ROUNDS = 10;
 
+// MySQL (a differenza di MariaDB) non supporta "ALTER TABLE ... ADD COLUMN
+// IF NOT EXISTS": per aggiungere colonne a tabelle create da versioni
+// precedenti di schema.sql in modo idempotente, si verifica prima la loro
+// esistenza via information_schema.
+async function addColumnIfMissing(connection, dbName, table, column, definition) {
+  const [rows] = await connection.query(
+    'SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+    [dbName, table, column]
+  );
+  if (rows.length) return;
+  await connection.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
 // Esegue schema.sql (crea database + tabelle) e poi semina gli account di
 // default con password hashate (bcrypt non è disponibile in SQL puro).
 // Esportata come funzione (invece che IIFE auto-eseguita) così può essere
@@ -35,7 +48,13 @@ async function initDb() {
     const schema = fs.readFileSync(schemaPath, 'utf8');
     await connection.query(schema);
 
-    await connection.changeUser({ database: process.env.DB_NAME || 'food_quality_manager' });
+    const dbName = process.env.DB_NAME || 'food_quality_manager';
+    await connection.changeUser({ database: dbName });
+
+    // Colonne aggiunte a impegni_c dopo la creazione iniziale della tabella
+    // (vedi commento in schema.sql): idempotente, sicura da rieseguire ad ogni boot.
+    await addColumnIfMissing(connection, dbName, 'impegni_c', 'section', 'TEXT NULL');
+    await addColumnIfMissing(connection, dbName, 'impegni_c', 'allow_attachment', 'TINYINT(1) NOT NULL DEFAULT 0');
 
     // --- Fornitori di test/demo (come nel vecchio client Firebase) ---
     const seedSuppliers = [

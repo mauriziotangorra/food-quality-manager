@@ -1,10 +1,28 @@
-import React from "react";
-import { Signature, UploadCloud, Download, Trash2, FileSignature, Save, FileUp } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Signature, UploadCloud, Download, Trash2, FileSignature, Save, FileUp, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useModal } from "../../hooks/useModal";
 import { api } from "../../services/api";
+import { getFullChecklist } from "../../utils/completenessCheck";
 
-export default function SignedDossierTab({ t, qualData, setQualData, supplierId, saveImmediate }) {
+export default function SignedDossierTab({ t, qualData, setQualData, globalConfig, supplierId, saveImmediate }) {
   const { showAlert, showConfirm } = useModal();
+  const checklist = useMemo(() => getFullChecklist(qualData, globalConfig), [qualData, globalConfig]);
+
+  // Verifica AI (best-effort, non bloccante) che il PDF caricato contenga una
+  // firma: rilanciata ogni volta che cambia il file caricato in questo slot.
+  const [signatureLooksMissing, setSignatureLooksMissing] = useState(false);
+  useEffect(() => {
+    const fileUrl = qualData.signedDossier?.fileUrl;
+    if (!fileUrl) {
+      setSignatureLooksMissing(false);
+      return;
+    }
+    let cancelled = false;
+    api.extractDocumentData(fileUrl, "firma")
+      .then((res) => { if (!cancelled) setSignatureLooksMissing(res?.data?.hasSignature === "No"); })
+      .catch(() => { if (!cancelled) setSignatureLooksMissing(false); });
+    return () => { cancelled = true; };
+  }, [qualData.signedDossier?.fileUrl]);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -38,6 +56,34 @@ export default function SignedDossierTab({ t, qualData, setQualData, supplierId,
         <Signature size={48} />
         <h3 className="text-5xl font-black uppercase tracking-tighter text-slate-900">{t("tabDossierFirmato")}</h3>
       </div>
+
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className={`p-8 rounded-[2rem] border-2 shadow-sm ${checklist.length ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200"}`}>
+          <div className="flex items-center gap-3 mb-4">
+            {checklist.length ? <AlertTriangle size={22} className="text-amber-600" /> : <CheckCircle2 size={22} className="text-emerald-600" />}
+            <h4 className="text-sm font-black uppercase text-slate-800">{t("preSubmitChecklistTitle")}</h4>
+          </div>
+          {checklist.length === 0 ? (
+            <p className="text-xs font-bold text-emerald-700">{t("preSubmitChecklistOk")}</p>
+          ) : (
+            <ul className="space-y-2">
+              {checklist.map((s) => (
+                <li key={s.tabId} className="text-xs font-bold text-amber-800">
+                  <span className="uppercase">{t(s.labelKey)}:</span> {s.issues.join(" ")}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {signatureLooksMissing && (
+          <div className="p-6 rounded-[2rem] border-2 border-amber-200 bg-amber-50 shadow-sm flex items-center gap-3">
+            <AlertTriangle size={20} className="text-amber-600 shrink-0" />
+            <p className="text-xs font-bold text-amber-800">{t("preSubmitSignatureWarning")}</p>
+          </div>
+        )}
+      </div>
+
       <div className="max-w-2xl mx-auto bg-slate-50 p-16 rounded-[4rem] border-4 border-dashed border-slate-300 flex flex-col items-center justify-center gap-8 shadow-inner text-center">
         {qualData.signedDossier?.fileUrl ? (
           <div className="flex flex-col items-center animate-in zoom-in duration-300 w-full">

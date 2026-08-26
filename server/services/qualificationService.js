@@ -8,13 +8,15 @@ const FILE_A_ROLES = ['allergenManagementPlan', 'contaminationRiskAssessment'];
 const HACCP_ROLES = ['manualExtract', 'flowChart', 'prp', 'oprpCcp'];
 
 // ------------------------------------------------------------------
-// Rekeying idx <-> id stabile per fileA.impegni/fileD.impegni:
+// Rekeying idx <-> id stabile per fileA.impegni:
 // nel vecchio blob queste risposte erano indicizzate per POSIZIONE
-// nell'array di template (globalConfig.impegniA/C), non per id
+// nell'array di template (globalConfig.impegniA), non per id
 // stabile. Le tabelle normalizzate usano l'id stabile del template; queste
 // funzioni convertono in entrambe le direzioni usando l'ordine corrente
-// (impegni_a/impegni_c.sort_order). Un indice fuori range
+// (impegni_a.sort_order). Un indice fuori range
 // (elemento di template ormai eliminato) viene semplicemente ignorato.
+// Dichiarazione C non usa piu' questo meccanismo: le risposte al
+// questionario sono gia' indicizzate per id stabile (vedi fileD.answers).
 // ------------------------------------------------------------------
 
 function checkedIdsFromBoolArray(orderedIds, boolArray) {
@@ -34,13 +36,9 @@ function boolArrayFromCheckedIds(orderedIds, checkedIdSet) {
 }
 
 async function getTemplateOrder() {
-  const [[impegniA], [impegniC]] = await Promise.all([
-    pool.query('SELECT id FROM impegni_a ORDER BY sort_order ASC'),
-    pool.query('SELECT id FROM impegni_c ORDER BY sort_order ASC')
-  ]);
+  const [impegniA] = await pool.query('SELECT id FROM impegni_a ORDER BY sort_order ASC');
   return {
-    impegniAIds: impegniA.map((r) => r.id),
-    impegniCIds: impegniC.map((r) => r.id)
+    impegniAIds: impegniA.map((r) => r.id)
   };
 }
 
@@ -50,11 +48,11 @@ async function getTemplateOrder() {
 // riga in nessuna delle 15 tabelle), per preservare il contratto "nessuna
 // qualifica salvata" di GET /api/qualifications/:id.
 async function getQualData(supplierId) {
-  const { impegniAIds, impegniCIds } = await getTemplateOrder();
+  const { impegniAIds } = await getTemplateOrder();
 
   const [
     [anagraficaRows], [contattiRows], [certRows],
-    [impegniARows], [impegniBRows], [impegniCRows], [fileAFileRows],
+    [impegniARows], [impegniBRows], [declCAnswerRows], [declCFileRows], [fileAFileRows],
     [prodottiRows],
     [rmRows], [rmFileRows],
     [ffdRows], [ffdFileRows],
@@ -67,7 +65,8 @@ async function getQualData(supplierId) {
     pool.query('SELECT * FROM qual_certificazioni WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT impegno_id FROM qual_impegni_a WHERE supplier_id = ?', [supplierId]),
     pool.query('SELECT impegno_id FROM qual_impegni_b WHERE supplier_id = ?', [supplierId]),
-    pool.query('SELECT impegno_id FROM qual_impegni_c WHERE supplier_id = ?', [supplierId]),
+    pool.query('SELECT * FROM qual_declaration_c_answers WHERE supplier_id = ?', [supplierId]),
+    pool.query('SELECT * FROM qual_declaration_c_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_file_a_files WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_prodotti WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
     pool.query('SELECT * FROM qual_raw_materials WHERE supplier_id = ? ORDER BY sort_order ASC', [supplierId]),
@@ -80,7 +79,7 @@ async function getQualData(supplierId) {
   ]);
 
   const hasAnyData = [
-    anagraficaRows, contattiRows, certRows, impegniARows, impegniBRows, impegniCRows,
+    anagraficaRows, contattiRows, certRows, impegniARows, impegniBRows, declCAnswerRows,
     fileAFileRows, prodottiRows, rmRows, ffdRows, mpFileRows, haccpFileRows, dossierRows
   ].some((rows) => rows.length > 0);
   if (!hasAnyData) return null;
@@ -118,8 +117,19 @@ async function getQualData(supplierId) {
     origine: r.origine || '', shelfLife: r.shelf_life || ''
   }));
 
-  const checkedCIds = new Set(impegniCRows.map((r) => r.impegno_id));
-  const fileD = { impegni: boolArrayFromCheckedIds(impegniCIds, checkedCIds) };
+  const declCFilesByQuestion = {};
+  declCFileRows.forEach((r) => {
+    (declCFilesByQuestion[r.impegno_id] ||= []).push({ name: r.name || '', url: r.url || '' });
+  });
+  const declCAnswers = {};
+  declCAnswerRows.forEach((r) => {
+    declCAnswers[r.impegno_id] = {
+      answer: r.answer || '',
+      notes: r.notes || '',
+      files: declCFilesByQuestion[r.impegno_id] || []
+    };
+  });
+  const fileD = { answers: declCAnswers };
 
   const rmFilesByMaterial = {};
   rmFileRows.forEach((r) => {
@@ -168,11 +178,11 @@ async function getQualData(supplierId) {
 // oggetto qualData, quindi delete+insert per sezione riproduce esattamente il
 // comportamento dell'UPSERT sul vecchio blob, senza ridurre l'atomicità.
 async function saveQualData(supplierId, qualData) {
-  const { impegniAIds, impegniCIds } = await getTemplateOrder();
+  const { impegniAIds } = await getTemplateOrder();
 
   const deleteTables = [
     'qual_anagrafica', 'qual_contatti', 'qual_certificazioni', 'qual_impegni_a', 'qual_impegni_b',
-    'qual_impegni_c', 'qual_file_a_files', 'qual_prodotti',
+    'qual_declaration_c_answers', 'qual_declaration_c_files', 'qual_file_a_files', 'qual_prodotti',
     'qual_raw_materials', 'qual_raw_material_files',
     'qual_food_fraud_defense', 'qual_food_fraud_defense_files', 'qual_moca_packaging_files',
     'qual_haccp_files', 'qual_dossier'
@@ -225,10 +235,25 @@ async function saveQualData(supplierId, qualData) {
     }
 
     const fileD = qualData.fileD || {};
-    const checkedCIds = checkedIdsFromBoolArray(impegniCIds, fileD.impegni);
-    for (const id of checkedCIds) {
+    const declCAnswers = fileD.answers || {};
+    for (const [impegnoId, ans] of Object.entries(declCAnswers)) {
+      const a2 = ans || {};
+      const hasContent = a2.answer || a2.notes || (Array.isArray(a2.files) && a2.files.length > 0);
+      if (!hasContent) continue;
       // eslint-disable-next-line no-await-in-loop
-      await conn.query('INSERT INTO qual_impegni_c (supplier_id, impegno_id) VALUES (?, ?)', [supplierId, id]);
+      await conn.query(
+        'INSERT INTO qual_declaration_c_answers (supplier_id, impegno_id, answer, notes) VALUES (?, ?, ?, ?)',
+        [supplierId, impegnoId, a2.answer || '', a2.notes || '']
+      );
+      const files = Array.isArray(a2.files) ? a2.files : [];
+      for (let j = 0; j < files.length; j++) {
+        const f = files[j];
+        // eslint-disable-next-line no-await-in-loop
+        await conn.query(
+          'INSERT INTO qual_declaration_c_files (supplier_id, impegno_id, name, url, sort_order) VALUES (?, ?, ?, ?, ?)',
+          [supplierId, impegnoId, f.name || '', f.url || '', j]
+        );
+      }
     }
 
     for (const role of FILE_A_ROLES) {

@@ -318,6 +318,9 @@ export default {
   logisticsProcessTitle: "Process and Logistics Flow Management",
   noParametersAtMoment: "No parameters present at the moment.",
   declCSimpleTitle: "Declaration C",
+  declCSectionPlaceholder: "Section (optional, e.g. TRANSPORT / LOGISTICS)...",
+  declCAllowAttachment: "Allow Attachment",
+  notesPlaceholder: "Additional notes...",
   noDeclarationsAtMoment: "No declarations present at the moment.",
 
   // Certifications
@@ -356,6 +359,9 @@ export default {
   signedDossierHint: "Print the dossier from Tab 12, sign it, scan it and re-upload it here to officially complete the qualification process.",
   saveDossierBtn: "Save Dossier",
   selectSignedPdf: "Select Signed PDF",
+  preSubmitChecklistTitle: "Summary before submitting",
+  preSubmitChecklistOk: "All sections appear complete.",
+  preSubmitSignatureWarning: "The uploaded document doesn't appear to contain a signature: make sure you uploaded the signed version.",
   dossierSaved: "Dossier saved successfully!",
 
   // Qualification Documentation
