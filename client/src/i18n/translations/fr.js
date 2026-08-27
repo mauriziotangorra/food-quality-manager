@@ -32,7 +32,7 @@ export default {
   tabCertificazioni: "3 CERTIFICATIONS",
   tabDichiarazioneA: "4 DÉCLARATION A",
   tabDichiarazioneB: "5 DÉCLARATION B",
-  tabDichiarazioneC: "6 DÉCLARATION C",
+  tabDichiarazioneC: "6 QUESTIONNAIRE",
   tabProdotti: "7 PRODUITS",
   tabMateriePrime: "8 MATIÈRES PREMIÈRES",
   tabFoodFraudDefense: "9 FOOD FRAUD ET FOOD DEFENSE",
@@ -286,9 +286,9 @@ export default {
   paramDescPlaceholderIt: "Description du paramètre (italien)...",
   confirmDeleteParameter: "Supprimer ce paramètre ?",
   noParameters: "Aucun paramètre présent.",
-  declCTitleAdmin: "Déclaration C",
+  declCTitleAdmin: "Questionnaire",
   addDeclaration: "Ajouter une Déclaration",
-  confirmDeleteDeclaration: "Supprimer cette déclaration ?",
+  confirmDeleteDeclaration: "Supprimer cette question ?",
   noDeclarations: "Aucune déclaration présente.",
   allergenGridTitleAdmin: "Grille des Allergènes (Établissement Entier)",
   addAllergen: "Ajouter un Allergène",
@@ -317,11 +317,11 @@ export default {
   // Déclaration B / C — textes génériques
   logisticsProcessTitle: "Gestion des Processus et Flux Logistiques",
   noParametersAtMoment: "Aucun paramètre présent pour le moment.",
-  declCSimpleTitle: "Déclaration C",
+  declCSimpleTitle: "Questionnaire",
   declCSectionPlaceholder: "Section (facultatif, ex. TRANSPORT / LOGISTIQUE)...",
   declCAllowAttachment: "Autoriser une Pièce Jointe",
   notesPlaceholder: "Notes supplémentaires...",
-  noDeclarationsAtMoment: "Aucune déclaration présente pour le moment.",
+  noDeclarationsAtMoment: "Aucune question présente pour le moment.",
 
   // Certifications
   addCertification: "Ajouter une Certification",
@@ -379,7 +379,7 @@ export default {
   technicalSheetLabel: "Fiche Technique de la Matière Première",
   analysisReportsLabel: "Analyses / Rapports d'Essai",
   riskMgmtLabel: "Gestion et Évaluation du Risque",
-  riskMgmtHint: "Si la gestion ou l'évaluation du risque diffère, téléchargez plusieurs fichiers.",
+  riskMgmtHint: "Si plusieurs allergènes sont gérés de la même manière, téléchargez le document pour un seul et précisez les autres dans les notes.",
   noRawMaterialsHint: 'Aucune matière première présente. Utilisez "Ajouter une Matière Première" pour commencer.',
 
   // Food Fraud / Food Defense

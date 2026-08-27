@@ -268,12 +268,17 @@ CREATE TABLE IF NOT EXISTS qual_qualification_doc_files (
   INDEX idx_qqdf_doc (supplier_id, doc_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- "notes" aggiunta dopo la creazione iniziale della tabella: vedi
+-- addColumnIfMissing in initDb.js per l'aggiunta idempotente alle installazioni
+-- gia' esistenti (CREATE TABLE IF NOT EXISTS qui sotto non tocca una tabella
+-- che esiste gia').
 CREATE TABLE IF NOT EXISTS qual_raw_materials (
   supplier_id VARCHAR(64) NOT NULL,
   id VARCHAR(64) NOT NULL,
   name VARCHAR(500), frequency VARCHAR(100),
   technical_sheet_name VARCHAR(500) NULL,
   technical_sheet_url VARCHAR(500) NULL,
+  notes TEXT NULL,
   sort_order INT NOT NULL DEFAULT 0,
   PRIMARY KEY (supplier_id, id),
   CONSTRAINT fk_qrm_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE

@@ -22,7 +22,7 @@ export default function RawMaterialsTab({ t, qualData, setQualData, supplierId, 
   const addMaterial = () => {
     updateMaterials([
       ...materials,
-      { id: Date.now().toString(), name: "", technicalSheet: null, analysisReports: [], riskAssessment: [], frequency: "" },
+      { id: Date.now().toString(), name: "", technicalSheet: null, analysisReports: [], riskAssessment: [], frequency: "", notes: "" },
     ]);
   };
 
@@ -197,6 +197,16 @@ export default function RawMaterialsTab({ t, qualData, setQualData, supplierId, 
                 <FileChips files={m.riskAssessment} onRemove={(url) => removeListFile(m.id, "riskAssessment", url)} />
                 <UploadButton label={t("uploadFileBtn")} onChange={(e) => handleUpload(m.id, "riskAssessment", e)} multiple />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-slate-500">{t("notes")}</label>
+              <textarea
+                className="w-full p-3 rounded-xl shadow-sm border-none font-bold text-sm bg-white outline-none focus:ring-2 ring-blue-500 resize-none h-20"
+                value={m.notes || ""}
+                onChange={(e) => updateMaterial(m.id, "notes", e.target.value)}
+                placeholder={t("notesPlaceholder")}
+              />
             </div>
           </div>
           );

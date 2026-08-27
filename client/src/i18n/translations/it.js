@@ -36,7 +36,7 @@ export default {
   tabCertificazioni: "3 CERTIFICAZIONI",
   tabDichiarazioneA: "4 DICHIARAZIONE A",
   tabDichiarazioneB: "5 DICHIARAZIONE B",
-  tabDichiarazioneC: "6 DICHIARAZIONE C",
+  tabDichiarazioneC: "6 QUESTIONARIO",
   tabProdotti: "7 PRODOTTI",
   tabMateriePrime: "8 MATERIE PRIME",
   tabFoodFraudDefense: "9 FOOD FRAUD E FOOD DEFENSE",
@@ -294,9 +294,9 @@ export default {
   paramDescPlaceholderIt: "Descrizione parametro (italiano)...",
   confirmDeleteParameter: "Eliminare questo parametro?",
   noParameters: "Nessun parametro presente.",
-  declCTitleAdmin: "Dichiarazione C",
+  declCTitleAdmin: "Questionario",
   addDeclaration: "Aggiungi Dichiarazione",
-  confirmDeleteDeclaration: "Eliminare questa dichiarazione?",
+  confirmDeleteDeclaration: "Eliminare questa domanda?",
   noDeclarations: "Nessuna dichiarazione presente.",
   allergenGridTitleAdmin: "Griglia Allergeni (Intero Stabilimento)",
   addAllergen: "Aggiungi Allergene",
@@ -325,11 +325,11 @@ export default {
   // Dichiarazione B / C — testi generici
   logisticsProcessTitle: "Gestione Processi e Flussi Logistici",
   noParametersAtMoment: "Nessun parametro presente al momento.",
-  declCSimpleTitle: "Dichiarazione C",
+  declCSimpleTitle: "Questionario",
   declCSectionPlaceholder: "Sezione (opzionale, es. TRASPORTO / LOGISTICA)...",
   declCAllowAttachment: "Consenti Allegato",
   notesPlaceholder: "Note aggiuntive...",
-  noDeclarationsAtMoment: "Nessuna dichiarazione presente al momento.",
+  noDeclarationsAtMoment: "Nessuna domanda presente al momento.",
 
   // Certificazioni
   addCertification: "Aggiungi Certificazione",
@@ -387,7 +387,7 @@ export default {
   technicalSheetLabel: "Scheda Tecnica Materia Prima",
   analysisReportsLabel: "Analisi / Rapporti di Prova",
   riskMgmtLabel: "Gestione e Valutazione del Rischio",
-  riskMgmtHint: "Se la gestione o la valutazione del rischio differisce, carica più file.",
+  riskMgmtHint: "Se la gestione di diversi allergeni avviene nello stesso modo inserire il documento per un solo allergene e specificarlo nelle note.",
   noRawMaterialsHint: 'Nessuna materia prima presente. Usa "Aggiungi Materia Prima" per iniziare.',
 
   // Food Fraud / Food Defense

@@ -404,7 +404,7 @@ export default function AdminPage({ onLogout }) {
                   </div>
                 </div>
 
-                {/* Dichiarazione C */}
+                {/* Questionario (ex Dichiarazione C) */}
                 <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">

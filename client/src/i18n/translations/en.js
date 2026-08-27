@@ -32,7 +32,7 @@ export default {
   tabCertificazioni: "3 CERTIFICATIONS",
   tabDichiarazioneA: "4 DECLARATION A",
   tabDichiarazioneB: "5 DECLARATION B",
-  tabDichiarazioneC: "6 DECLARATION C",
+  tabDichiarazioneC: "6 QUESTIONNAIRE",
   tabProdotti: "7 PRODUCTS",
   tabMateriePrime: "8 RAW MATERIALS",
   tabFoodFraudDefense: "9 FOOD FRAUD AND FOOD DEFENSE",
@@ -286,9 +286,9 @@ export default {
   paramDescPlaceholderIt: "Parameter description (Italian)...",
   confirmDeleteParameter: "Delete this parameter?",
   noParameters: "No parameters present.",
-  declCTitleAdmin: "Declaration C",
+  declCTitleAdmin: "Questionnaire",
   addDeclaration: "Add Declaration",
-  confirmDeleteDeclaration: "Delete this declaration?",
+  confirmDeleteDeclaration: "Delete this question?",
   noDeclarations: "No declarations present.",
   allergenGridTitleAdmin: "Allergen Grid (Whole Facility)",
   addAllergen: "Add Allergen",
@@ -317,11 +317,11 @@ export default {
   // Declaration B / C — generic texts
   logisticsProcessTitle: "Process and Logistics Flow Management",
   noParametersAtMoment: "No parameters present at the moment.",
-  declCSimpleTitle: "Declaration C",
+  declCSimpleTitle: "Questionnaire",
   declCSectionPlaceholder: "Section (optional, e.g. TRANSPORT / LOGISTICS)...",
   declCAllowAttachment: "Allow Attachment",
   notesPlaceholder: "Additional notes...",
-  noDeclarationsAtMoment: "No declarations present at the moment.",
+  noDeclarationsAtMoment: "No questions present at the moment.",
 
   // Certifications
   addCertification: "Add Certification",
@@ -379,7 +379,7 @@ export default {
   technicalSheetLabel: "Raw Material Technical Sheet",
   analysisReportsLabel: "Analysis / Test Reports",
   riskMgmtLabel: "Risk Management and Assessment",
-  riskMgmtHint: "If risk management or assessment differs, upload multiple files.",
+  riskMgmtHint: "If several allergens are managed the same way, upload the document for just one allergen and specify the others in the notes.",
   noRawMaterialsHint: 'No raw materials present. Use "Add Raw Material" to get started.',
 
   // Food Fraud / Food Defense

@@ -143,7 +143,7 @@ async function getQualData(supplierId) {
     bucket[r.role].push({ name: r.name || '', url: r.url || '' });
   });
   const rawMaterials = rmRows.map((r) => ({
-    id: r.id, name: r.name || '', frequency: r.frequency || '',
+    id: r.id, name: r.name || '', frequency: r.frequency || '', notes: r.notes || '',
     technicalSheet: r.technical_sheet_url ? { name: r.technical_sheet_name || '', url: r.technical_sheet_url } : null,
     analysisReports: rmFilesByMaterial[r.id]?.analysisReports || [],
     riskAssessment: rmFilesByMaterial[r.id]?.riskAssessment || []
@@ -300,8 +300,8 @@ async function saveQualData(supplierId, qualData) {
       const m = materials[i];
       // eslint-disable-next-line no-await-in-loop
       await conn.query(
-        'INSERT INTO qual_raw_materials (supplier_id, id, name, frequency, technical_sheet_name, technical_sheet_url, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [supplierId, String(m.id), m.name || '', m.frequency || '', m.technicalSheet?.name || null, m.technicalSheet?.url || null, i]
+        'INSERT INTO qual_raw_materials (supplier_id, id, name, frequency, technical_sheet_name, technical_sheet_url, notes, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [supplierId, String(m.id), m.name || '', m.frequency || '', m.technicalSheet?.name || null, m.technicalSheet?.url || null, m.notes || '', i]
       );
       for (const role of RM_FILE_ROLES) {
         const files = Array.isArray(m[role]) ? m[role] : [];

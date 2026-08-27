@@ -55,6 +55,7 @@ async function initDb() {
     // (vedi commento in schema.sql): idempotente, sicura da rieseguire ad ogni boot.
     await addColumnIfMissing(connection, dbName, 'impegni_c', 'section', 'TEXT NULL');
     await addColumnIfMissing(connection, dbName, 'impegni_c', 'allow_attachment', 'TINYINT(1) NOT NULL DEFAULT 0');
+    await addColumnIfMissing(connection, dbName, 'qual_raw_materials', 'notes', 'TEXT NULL');
 
     // --- Fornitori di test/demo (come nel vecchio client Firebase) ---
     const seedSuppliers = [
