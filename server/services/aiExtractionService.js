@@ -124,18 +124,23 @@ const BASE_PROMPTS = {
   etichetta:
     "Sei un assistente che legge l'etichetta alimentare di un prodotto. Estrai: " +
     "1) il testo completo dell'elenco ingredienti così come scritto in etichetta; " +
-    "2) i valori della tabella nutrizionale per 100g/100ml per le voci indicate nello schema (energia in kJ, energia in kcal, grassi, di cui saturi, carboidrati, di cui zuccheri, fibre, proteine, sale); " +
+    "2) i valori della tabella nutrizionale per 100g/100ml per le voci indicate nello schema (energia in kJ, energia in kcal, grassi, di cui saturi, carboidrati, di cui zuccheri, fibre, proteine, sale). " +
+    "Spesso l'energia e' scritta su un'unica riga con entrambe le unita' insieme (es. '314 kcal / 1322 kJ'): in quel caso SEPARA i due numeri, mettendo il valore in kcal SOLO nel campo energyKcal e il valore in kJ SOLO nel campo energyKj, ciascuno come numero semplice senza l'unita' di misura. Lo stesso vale per ogni altro valore nutrizionale: metti nel campo il solo numero (es. '9,2' non '9,2 g'); " +
     '3) per ciascuno degli allergeni della lista fornita qui sotto, indica se è presente come ingrediente ("Sì (Ingrediente)") o come derivato/additivo ("Sì (Derivato/Additivo)") SOLO se ne hai trovato evidenza chiara in etichetta; non includere nell\'elenco gli allergeni assenti. ' +
     "Usa esattamente l'id fornito per ciascun allergene nella risposta.\n" +
     "Lista allergeni noti (id: nome): {{ALLERGEN_LIST}}\n" +
     "Rispondi SOLO con un oggetto JSON conforme allo schema fornito. Se un campo non è determinabile, lascialo come stringa vuota o omettilo. Non inventare dati.",
   tecnica:
     "Sei un assistente che legge la scheda tecnica generale di un prodotto alimentare (documento commerciale/tecnico fornito dal fornitore, non l'etichetta e non un rapporto di laboratorio). Estrai, solo se presenti nel documento: " +
-    "denominazione legale, marchio/brand, claim commerciale, elenco ingredienti, eventuale nota allergeni, TMC/shelf life, luogo di produzione, decodifica del lotto, modalità d'uso e consumo, condizioni di conservazione, etichetta ambientale, modalità di confezionamento; " +
-    "i valori della tabella nutrizionale per 100g/100ml (energia in kJ e kcal, grassi, di cui saturi, carboidrati, di cui zuccheri, fibre, proteine, sale); " +
+    "legalName (denominazione legale/di vendita del prodotto, cioè il nome con cui il prodotto DEVE essere venduto secondo il Reg. UE 1169/2011, es. 'Pancakes', 'Crêpes dolci farcite'). " +
+    "ATTENZIONE: legalName NON è il codice/riferimento interno del documento (es. 'Fiche Technique Produit: 3924', 'Codice prodotto', numeri di indice/revisione) e NON è il marchio/brand (quello va nel campo 'brand' separato). " +
+    "Se il documento non ha un campo esplicitamente etichettato come nome/denominazione del prodotto, deducilo dalla descrizione generale del prodotto (es. dalle prime parole della sezione 'Descrizione prodotto'/'Presentazione del prodotto' o simile), scegliendo un nome breve e concreto del tipo di prodotto (es. se la descrizione dice 'Piccole crêpes spesse all'americana, dolci...' usa qualcosa come 'Pancakes'), MAI il codice prodotto e MAI il brand. " +
+    "marchio/brand, claim commerciale, elenco ingredienti, eventuale nota allergeni, TMC/shelf life, luogo di produzione, decodifica del lotto, modalità d'uso e consumo, condizioni di conservazione, etichetta ambientale, modalità di confezionamento; " +
+    "i valori della TABELLA NUTRIZIONALE (dichiarazione nutrizionale) per 100g/100ml (energia in kJ e kcal, grassi, di cui saturi, carboidrati, di cui zuccheri, fibre, proteine, sale) — questa va SEMPRE estratta se presente nel documento, e non conta come 'analisi chimico-fisica' (vedi esclusione piu' sotto, si riferisce a un documento diverso). " +
+    "Spesso l'energia e' scritta su un'unica riga con entrambe le unita' insieme (es. '314 kcal / 1322 kJ'): in quel caso SEPARA i due numeri, mettendo il valore in kcal SOLO nel campo energyKcal e il valore in kJ SOLO nel campo energyKj, ciascuno come numero semplice senza l'unita' di misura. Lo stesso vale per ogni altro valore nutrizionale: metti nel campo il solo numero (es. '9,2' non '9,2 g'). " +
     "le caratteristiche organolettiche (consistenza, aroma, aspetto/colore, sapore); " +
     'e la dichiarazione OGM (se il prodotto contiene OGM: "Sì" o "No", più eventuale testo della dichiarazione). ' +
-    "NON estrarre parametri di analisi microbiologica o chimico-fisica anche se presenti nel documento: quelli si caricano da altri documenti dedicati. " +
+    "NON estrarre invece i risultati di prove di laboratorio microbiologiche o chimico-fisiche (es. Salmonella, Listeria, carica microbica, pH, umidita', attivita' dell'acqua, metalli pesanti): quelli arrivano da rapporti di analisi dedicati caricati separatamente, e sono cosa diversa dalla tabella nutrizionale del prodotto che invece VA estratta. Un semplice riferimento normativo (es. 'Regolamento n. 2073/2005') senza valori misurati non e' un dato da estrarre in nessun campo. " +
     "Rispondi SOLO con un oggetto JSON conforme allo schema fornito. Se un campo non è determinabile, lascialo come stringa vuota o omettilo. Non inventare dati.",
   firma:
     "Sei un assistente che controlla se un documento PDF caricato come 'dossier di qualifica firmato' contiene effettivamente una firma. " +

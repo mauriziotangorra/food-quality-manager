@@ -32,7 +32,7 @@ export default {
   tabCertificazioni: "3 CERTIFICACIONES",
   tabDichiarazioneA: "4 DECLARACIÓN A",
   tabDichiarazioneB: "5 DECLARACIÓN B",
-  tabDichiarazioneC: "6 DECLARACIÓN C",
+  tabDichiarazioneC: "6 CUESTIONARIO",
   tabProdotti: "7 PRODUCTOS",
   tabMateriePrime: "8 MATERIAS PRIMAS",
   tabFoodFraudDefense: "9 FOOD FRAUD Y FOOD DEFENSE",
@@ -286,9 +286,9 @@ export default {
   paramDescPlaceholderIt: "Descripción del parámetro (italiano)...",
   confirmDeleteParameter: "¿Eliminar este parámetro?",
   noParameters: "No hay parámetros presentes.",
-  declCTitleAdmin: "Declaración C",
+  declCTitleAdmin: "Cuestionario",
   addDeclaration: "Añadir Declaración",
-  confirmDeleteDeclaration: "¿Eliminar esta declaración?",
+  confirmDeleteDeclaration: "¿Eliminar esta pregunta?",
   noDeclarations: "No hay declaraciones presentes.",
   allergenGridTitleAdmin: "Matriz de Alérgenos (Toda la Instalación)",
   addAllergen: "Añadir Alérgeno",
@@ -317,11 +317,11 @@ export default {
   // Declaración B / C — textos genéricos
   logisticsProcessTitle: "Gestión de Procesos y Flujos Logísticos",
   noParametersAtMoment: "No hay parámetros presentes en este momento.",
-  declCSimpleTitle: "Declaración C",
+  declCSimpleTitle: "Cuestionario",
   declCSectionPlaceholder: "Sección (opcional, ej. TRANSPORTE / LOGÍSTICA)...",
   declCAllowAttachment: "Permitir Adjunto",
   notesPlaceholder: "Notas adicionales...",
-  noDeclarationsAtMoment: "No hay declaraciones presentes en este momento.",
+  noDeclarationsAtMoment: "No hay preguntas presentes en este momento.",
 
   // Certificaciones
   addCertification: "Añadir Certificación",
@@ -379,7 +379,7 @@ export default {
   technicalSheetLabel: "Ficha Técnica de la Materia Prima",
   analysisReportsLabel: "Análisis / Informes de Prueba",
   riskMgmtLabel: "Gestión y Evaluación del Riesgo",
-  riskMgmtHint: "Si la gestión o evaluación del riesgo difiere, carga varios archivos.",
+  riskMgmtHint: "Si varios alérgenos se gestionan de la misma manera, carga el documento para uno solo y especifica los demás en las notas.",
   noRawMaterialsHint: 'No hay materias primas presentes. Usa "Añadir Materia Prima" para empezar.',
 
   // Food Fraud / Food Defense

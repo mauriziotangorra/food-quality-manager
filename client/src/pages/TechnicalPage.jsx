@@ -205,6 +205,24 @@ export default function TechnicalPage({ onLogout }) {
     );
   };
 
+  // Come updateSpecTable, ma se la riga con quell'id non esiste ancora (es.
+  // specifica creata prima che questa riga fissa esistesse) la crea invece di
+  // non fare nulla in silenzio: usata per applicare i suggerimenti AI, dove un
+  // "non succede niente" senza errori sarebbe invisibile al fornitore.
+  const setSpecTableRow = (specId, table, rowId, label, val) => {
+    setProductSpecs((prev) =>
+      prev.map((s) => {
+        if (s.id !== specId) return s;
+        const rows = Array.isArray(s[table]) ? s[table] : [];
+        const exists = rows.some((r) => r.id === rowId);
+        const nextRows = exists
+          ? rows.map((r) => (r.id === rowId ? { ...r, v: val } : r))
+          : [...rows, { id: rowId, p: label, v: val }];
+        return { ...s, [table]: nextRows };
+      })
+    );
+  };
+
   const addTableRow = (specId, table) => {
     setProductSpecs((prev) =>
       prev.map((s) => {
@@ -367,7 +385,7 @@ export default function TechnicalPage({ onLogout }) {
       if (selected.ingredients) updateSpecField(specId, "a.ingredients", selected.ingredients);
       Object.entries(selected.nutrition || {}).forEach(([key, val]) => {
         const rowId = NUTRITION_ROW_ID[key];
-        if (val && rowId) updateSpecTable(specId, "c", rowId, "v", val);
+        if (val && rowId) setSpecTableRow(specId, "c", rowId, t(key), val);
       });
       // La dichiarazione allergeni e' unica per fornitore (Dichiarazione A, non
       // per prodotto): la lettura dell'etichetta di QUESTO prodotto propone solo
@@ -391,7 +409,7 @@ export default function TechnicalPage({ onLogout }) {
       });
       Object.entries(selected.nutrition || {}).forEach(([key, val]) => {
         const rowId = NUTRITION_ROW_ID[key];
-        if (val && rowId) updateSpecTable(specId, "c", rowId, "v", val);
+        if (val && rowId) setSpecTableRow(specId, "c", rowId, t(key), val);
       });
       Object.entries(selected.organoleptic || {}).forEach(([key, val]) => {
         if (val) updateSpecField(specId, `e.${key}`, val);
