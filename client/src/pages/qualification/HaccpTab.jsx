@@ -6,15 +6,17 @@ import { getHaccpSlotIssues, checkHaccpCompleteness } from "../../utils/complete
 
 const EMPTY_HACCP = { manualExtract: [], flowChart: [], prp: [], oprpCcp: [] };
 
-const MANUAL_EXTRACT = { key: "manualExtract", labelKey: "haccpManualExtractLabel", descKey: "haccpManualExtractDesc" };
-const FLOW_CHART = { key: "flowChart", labelKey: "haccpFlowChartLabel", descKey: "haccpFlowChartDesc" };
-const PRP = { key: "prp", labelKey: "haccpPrpLabel", descKey: "haccpPrpDesc" };
-const OPRP_CCP = { key: "oprpCcp", labelKey: "haccpOprpLabel", descKey: "haccpOprpDesc" };
+const MANUAL_EXTRACT = { keys: ["manualExtract"], labelKey: "haccpManualExtractLabel", descKey: "haccpManualExtractDesc" };
+const FLOW_CHART = { keys: ["flowChart"], labelKey: "haccpFlowChartLabel", descKey: "haccpFlowChartDesc" };
+// PRP e OPRP/CCP ora sono un'unica area di upload (richiesto dal cliente: "put
+// them together, still with the option to add more than one PDF"). I file
+// restano fisicamente sotto le chiavi "prp"/"oprpCcp" — nessuna migrazione
+// dati necessaria, i file gia' caricati da fornitori esistenti restano
+// visibili — ma vengono mostrati e caricati come un'unica lista combinata. I
+// nuovi upload vanno sempre sotto la prima chiave ("prp").
+const PRP_OPRP_CCP = { keys: ["prp", "oprpCcp"], labelKey: "haccpPrpOprpLabel", descKey: "haccpPrpOprpDesc" };
 
-// PRP e OPRP/CCP condividono la stessa card (richiesto dal cliente: "questi
-// due possono stare nello stesso box"), separati da un divisore interno.
-// Estratto manuale e diagramma di flusso restano ciascuno nella propria card.
-const CARDS = [[MANUAL_EXTRACT], [FLOW_CHART], [PRP, OPRP_CCP]];
+const CARDS = [[MANUAL_EXTRACT], [FLOW_CHART], [PRP_OPRP_CCP]];
 
 export default function HaccpTab({ t, qualData, setQualData, supplierId, saveImmediate }) {
   const { showAlert, showConfirm } = useModal();
@@ -81,17 +83,18 @@ export default function HaccpTab({ t, qualData, setQualData, supplierId, saveImm
 
       <div className="space-y-8">
         {CARDS.map((slots) => {
-          const cardHasIssues = slots.some((slot) => getHaccpSlotIssues(haccp[slot.key] || []).length > 0);
+          const cardHasIssues = slots.some((slot) => slot.keys.some((k) => getHaccpSlotIssues(haccp[k] || []).length > 0));
           return (
             <div
-              key={slots.map((s) => s.key).join("+")}
+              key={slots.map((s) => s.keys.join("+")).join("|")}
               className={`bg-slate-50 p-10 rounded-[3rem] border shadow-inner space-y-6 ${cardHasIssues ? "border-amber-400" : "border-slate-200"}`}
             >
               {slots.map((slot, idx) => {
-                const files = haccp[slot.key] || [];
-                const issues = getHaccpSlotIssues(files);
+                const files = slot.keys.flatMap((k) => (haccp[k] || []).map((f) => ({ ...f, _sourceKey: k })));
+                const issues = slot.keys.flatMap((k) => getHaccpSlotIssues(haccp[k] || []));
+                const uploadKey = slot.keys[0];
                 return (
-                  <div key={slot.key} className={`space-y-6 ${idx > 0 ? "pt-6 border-t border-slate-200" : ""}`}>
+                  <div key={slot.keys.join("+")} className={`space-y-6 ${idx > 0 ? "pt-6 border-t border-slate-200" : ""}`}>
                     <div className="border-b-2 border-slate-200 pb-4">
                       <h4 className="text-2xl font-black uppercase text-slate-800">{t(slot.labelKey)}</h4>
                       <p className="text-xs font-bold text-slate-400 mt-2">{t(slot.descKey)}</p>
@@ -112,7 +115,7 @@ export default function HaccpTab({ t, qualData, setQualData, supplierId, saveImm
                             <a href={f.url} download={f.name} className="text-blue-600 hover:text-emerald-600 bg-blue-50 p-1.5 rounded-lg shadow-sm transition-all shrink-0">
                               <Download size={13} />
                             </a>
-                            <button onClick={() => removeFile(slot.key, f.url)} className="text-slate-400 hover:text-red-600 bg-slate-50 p-1.5 rounded-lg shadow-sm transition-all shrink-0">
+                            <button onClick={() => removeFile(f._sourceKey, f.url)} className="text-slate-400 hover:text-red-600 bg-slate-50 p-1.5 rounded-lg shadow-sm transition-all shrink-0">
                               <X size={13} />
                             </button>
                           </div>
@@ -123,7 +126,7 @@ export default function HaccpTab({ t, qualData, setQualData, supplierId, saveImm
                             <input
                               className={`flex-1 p-2 rounded-lg text-xs font-bold bg-white outline-none focus:ring-2 ring-blue-500 border ${!f.appliesTo ? "border-red-400" : "border-slate-200"}`}
                               value={f.appliesTo || ""}
-                              onChange={(e) => updateAppliesTo(slot.key, f.url, e.target.value)}
+                              onChange={(e) => updateAppliesTo(f._sourceKey, f.url, e.target.value)}
                               placeholder={t("appliesToApplyPlaceholder")}
                             />
                           </div>
@@ -136,7 +139,7 @@ export default function HaccpTab({ t, qualData, setQualData, supplierId, saveImm
                       <button className="bg-slate-900 text-white rounded-xl px-6 py-3 font-black text-xs uppercase hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 pointer-events-none">
                         <UploadCloud size={16} /> {t("uploadFileBtn")}
                       </button>
-                      <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(slot.key, e)} />
+                      <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(uploadKey, e)} />
                     </div>
                   </div>
                 );

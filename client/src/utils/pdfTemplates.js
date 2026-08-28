@@ -148,6 +148,26 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
           `;
         }).join('')}
       </table>
+      <table style="margin-top:10px;">
+        <tr><th style="width:60%">${t('docType')}</th><th style="width:40%">${t('attState')}</th></tr>
+        <tr>
+          <td><b>${t('allergenMgmtPlan')}</b></td>
+          <td>${(qualData.fileA?.allergenManagementPlan || []).length ? t('loaded') : t('missing')}</td>
+        </tr>
+        <tr>
+          <td><b>${t('contaminationRiskAssessment')}</b></td>
+          <td>${(qualData.fileA?.contaminationRiskAssessment || []).length ? t('loaded') : t('missing')}</td>
+        </tr>
+      </table>
+      <table style="margin-top:10px;">
+        <tr><th style="width:40%">${t('allergen')}</th><th style="width:15%">${t('presence')}</th><th style="width:20%">${t('traces')}</th><th style="width:25%">${t('notes')}</th></tr>
+        ${(globalConfig.allergeni || []).map((all) => {
+          const langKey = lang.toLowerCase();
+          const row = qualData.fileA?.allergens?.[all.id] || {};
+          const allergenName = all[langKey] || all.it || '';
+          return `<tr><td><b>${allergenName}</b></td><td>${row.presenza || 'No'}</td><td>${row.tracce || 'No'}</td><td>${row.note || ''}</td></tr>`;
+        }).join('')}
+      </table>
     </div>
 
     <div class="section">
@@ -177,24 +197,22 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
     <div class="section">
       <div class="title">${t('sect6')}</div>
       <table>
-        <tr><th style="width:60%">${t('docType')}</th><th style="width:40%">${t('attState')}</th></tr>
-        <tr>
-          <td><b>${t('allergenMgmtPlan')}</b></td>
-          <td>${(qualData.fileA?.allergenManagementPlan || []).length ? t('loaded') : t('missing')}</td>
-        </tr>
-        <tr>
-          <td><b>${t('contaminationRiskAssessment')}</b></td>
-          <td>${(qualData.fileA?.contaminationRiskAssessment || []).length ? t('loaded') : t('missing')}</td>
-        </tr>
-      </table>
-      <table style="margin-top:10px;">
-        <tr><th style="width:40%">${t('allergen')}</th><th style="width:15%">${t('presence')}</th><th style="width:20%">${t('traces')}</th><th style="width:25%">${t('notes')}</th></tr>
-        ${(globalConfig.allergeni || []).map((all) => {
+        <tr><th style="width:8%">${t('declCColNo')}</th><th style="width:52%">${t('declCColQuestion')}</th><th style="width:15%">${t('answerColLabel')}</th><th style="width:25%">${t('declCColNotes')}</th></tr>
+        ${(() => {
           const langKey = lang.toLowerCase();
-          const row = qualData.fileA?.allergens?.[all.id] || {};
-          const allergenName = all[langKey] || all.it || '';
-          return `<tr><td><b>${allergenName}</b></td><td>${row.presenza || 'No'}</td><td>${row.tracce || 'No'}</td><td>${row.note || ''}</td></tr>`;
-        }).join('')}
+          const items = globalConfig.impegniC || [];
+          const answers = qualData.fileD?.answers || {};
+          return items.map((imp, idx) => {
+            const sectionKey = langKey === 'it' ? 'section' : `section_${langKey}`;
+            const sectionText = (imp[sectionKey] || imp.section || '').trim();
+            const prevSectionText = idx > 0 ? (items[idx - 1][sectionKey] || items[idx - 1].section || '').trim() : null;
+            const showHeader = sectionText && sectionText !== prevSectionText;
+            const questionText = imp[langKey] || imp.it || '';
+            const ans = answers[imp.id] || {};
+            const headerRow = showHeader ? `<tr><td colspan="4" style="background:#f1f5f9; font-weight:900; text-transform:uppercase; font-size:9px;">${sectionText}</td></tr>` : '';
+            return `${headerRow}<tr><td style="text-align:center;">${idx + 1}</td><td>${questionText}</td><td style="text-align:center;"><b>${ans.answer || '-'}</b></td><td>${ans.notes || ''}</td></tr>`;
+          }).join('');
+        })()}
       </table>
     </div>
 
@@ -210,6 +228,61 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
             <td>${p?.shelfLife || '-'}</td>
           </tr>
         `).join('') : `<tr><td colspan="4" style="text-align:center;">-</td></tr>`}
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="title">${t('sect8')}</div>
+      <table>
+        <tr><th>${t('name')}</th><th>${t('analysisFrequencyLabel')}</th><th>${t('technicalSheetLabel')}</th><th>${t('analysisReportsLabel')}</th><th>${t('riskMgmtLabel')}</th><th>${t('notes')}</th></tr>
+        ${(qualData.rawMaterials || []).length > 0 ? (qualData.rawMaterials || []).map((m) => `
+          <tr>
+            <td><b>${m?.name || '-'}</b></td>
+            <td>${m?.frequency || '-'}</td>
+            <td>${m?.technicalSheet ? t('loaded') : t('missing')}</td>
+            <td>${(m?.analysisReports || []).length ? t('loaded') : t('missing')}</td>
+            <td>${(m?.riskAssessment || []).length ? t('loaded') : t('missing')}</td>
+            <td>${m?.notes || ''}</td>
+          </tr>
+        `).join('') : `<tr><td colspan="6" style="text-align:center;">-</td></tr>`}
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="title">${t('sect9')}</div>
+      <table>
+        <tr><th style="width:25%">${t('typology')}</th><th style="width:40%">${t('appliesTo')}</th><th style="width:35%">${t('attState')}</th></tr>
+        <tr>
+          <td><b>Food Fraud</b></td>
+          <td>${qualData.foodFraudDefense?.foodFraud?.appliesTo || '-'}</td>
+          <td>${(qualData.foodFraudDefense?.foodFraud?.files || []).length ? t('loaded') : t('missing')}</td>
+        </tr>
+        <tr>
+          <td><b>Food Defense</b></td>
+          <td>${qualData.foodFraudDefense?.foodDefense?.appliesTo || '-'}</td>
+          <td>${(qualData.foodFraudDefense?.foodDefense?.files || []).length ? t('loaded') : t('missing')}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="title">${t('sect10')}</div>
+      <table>
+        <tr><th style="width:60%">${t('docType')}</th><th style="width:40%">${t('attState')}</th></tr>
+        <tr><td><b>${t('mocaDeclLabel')}</b></td><td>${(qualData.mocaPackaging?.moca || []).length ? t('loaded') : t('missing')}</td></tr>
+        <tr><td><b>${t('packagingTechSheetLabel')}</b></td><td>${(qualData.mocaPackaging?.technicalSpecs || []).length ? t('loaded') : t('missing')}</td></tr>
+        <tr><td><b>${t('migrationTestsLabel')}</b></td><td>${(qualData.mocaPackaging?.migrationTests || []).length ? t('loaded') : t('missing')}</td></tr>
+        <tr><td><b>${t('ppwrDocLabel')}</b></td><td>${(qualData.mocaPackaging?.ppwr || []).length ? t('loaded') : t('missing')}</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="title">${t('sect11')}</div>
+      <table>
+        <tr><th style="width:60%">${t('docType')}</th><th style="width:40%">${t('attState')}</th></tr>
+        <tr><td><b>${t('haccpManualExtractLabel')}</b></td><td>${(qualData.haccp?.manualExtract || []).length ? t('loaded') : t('missing')}</td></tr>
+        <tr><td><b>${t('haccpFlowChartLabel')}</b></td><td>${(qualData.haccp?.flowChart || []).length ? t('loaded') : t('missing')}</td></tr>
+        <tr><td><b>${t('haccpPrpOprpLabel')}</b></td><td>${[...(qualData.haccp?.prp || []), ...(qualData.haccp?.oprpCcp || [])].length ? t('loaded') : t('missing')}</td></tr>
       </table>
     </div>
 
