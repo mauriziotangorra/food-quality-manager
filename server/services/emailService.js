@@ -19,7 +19,15 @@ function getTransporter() {
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD
-    }
+    },
+    // Senza timeout espliciti, un host che blocca/droppa silenziosamente le
+    // connessioni SMTP in uscita fa restare la richiesta appesa finche' il
+    // proxy della piattaforma di hosting non la interrompe da solo con un
+    // 502 generico — questi limiti la fanno fallire in modo pulito e veloce,
+    // con un errore leggibile invece che un timeout opaco lato client.
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
   return cachedTransporter;
 }
