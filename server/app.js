@@ -43,6 +43,7 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/qualifications', require('./routes/qualifications'));
 app.use('/api/bootstrap', require('./routes/bootstrap'));
 app.use('/api/ai', require('./routes/aiExtract'));
+app.use('/api/email', require('./routes/email'));
 
 // SPA fallback: qualsiasi rotta non gestita dalle API sopra viene servita
 // con l'index.html del frontend, così il router lato client (React Router)

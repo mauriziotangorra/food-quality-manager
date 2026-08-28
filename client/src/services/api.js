@@ -87,6 +87,9 @@ export const api = {
   extractDocumentData: (fileUrl, docType, allergens) =>
     request('/api/ai/extract', { method: 'POST', body: JSON.stringify({ fileUrl, docType, allergens }) }),
 
+  // Diagnostica SMTP (solo admin): invia una email di test all'indirizzo indicato.
+  sendTestEmail: (to) => request('/api/email/test', { method: 'POST', body: JSON.stringify({ to }) }),
+
   // Impostazioni globali (logo + templates)
   getSettings: () => request('/api/settings'),
   saveSettings: (data) =>

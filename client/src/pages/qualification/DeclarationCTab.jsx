@@ -6,14 +6,9 @@ import { api } from "../../services/api";
 // Valori fissi (non tradotti): come per il campo OGM e le presenze allergeni,
 // devono restare stabili indipendentemente dalla lingua dell'interfaccia,
 // altrimenti una risposta salvata in italiano non verrebbe piu' riconosciuta
-// dopo un cambio lingua.
+// dopo un cambio lingua. Le etichette delle colonne sotto sono invece
+// tradotte normalmente: solo il VALORE salvato resta fisso.
 const ANSWER_OPTIONS = ["Sì", "No", "N/A"];
-
-const ANSWER_STYLE = {
-  "Sì": "bg-emerald-600 border-emerald-600 text-white",
-  "No": "bg-red-600 border-red-600 text-white",
-  "N/A": "bg-slate-600 border-slate-600 text-white",
-};
 
 const EMPTY_ANSWER = { answer: "", notes: "", files: [] };
 
@@ -95,77 +90,94 @@ export default function DeclarationCTab({ t, lang, qualData, setQualData, global
           <p className="text-sm font-bold text-slate-400 text-center py-6">{t("noDeclarationsAtMoment")}</p>
         )}
 
-        <div className="space-y-6">
-          {items.map((imp, idx) => {
-            const questionText = imp[langKey] || imp.it || "";
-            const sectionText = (imp.section || "").trim();
-            const prevSection = idx > 0 ? (items[idx - 1].section || "").trim() : null;
-            const showSectionHeader = sectionText && sectionText !== prevSection;
-            const ans = getAnswer(imp.id);
+        {items.length > 0 && (
+          <div className="overflow-x-auto rounded-2xl border border-slate-300 shadow-sm">
+            <table className="w-full border-collapse min-w-[960px]">
+              <thead>
+                <tr className="bg-rose-950 text-white">
+                  <th className="p-3 text-[10px] font-black uppercase w-12">{t("declCColNo")}</th>
+                  <th className="p-3 text-[10px] font-black uppercase text-left">{t("declCColQuestion")}</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-16">Sì</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-16">No</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-16">N/A</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-64">{t("declCColNotes")}</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-40">{t("declCColAttachment")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((imp, idx) => {
+                  const sectionKey = langKey === "it" ? "section" : `section_${langKey}`;
+                  const questionText = imp[langKey] || imp.it || "";
+                  const sectionText = (imp[sectionKey] || imp.section || "").trim();
+                  const prevSectionKey = idx > 0 ? (langKey === "it" ? "section" : `section_${langKey}`) : null;
+                  const prevSection = idx > 0 ? (items[idx - 1][prevSectionKey] || items[idx - 1].section || "").trim() : null;
+                  const showSectionHeader = sectionText && sectionText !== prevSection;
+                  const ans = getAnswer(imp.id);
 
-            return (
-              <React.Fragment key={imp.id}>
-                {showSectionHeader && (
-                  <h5 className="text-sm font-black uppercase text-amber-600 tracking-wide pt-4 mt-4 border-t-2 border-amber-200 first:border-t-0 first:pt-0 first:mt-0">
-                    {sectionText}
-                  </h5>
-                )}
-                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
-                  <p className="text-sm font-bold text-slate-800 leading-relaxed">{questionText}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {ANSWER_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => updateAnswer(imp.id, { answer: opt })}
-                        className={`px-5 py-2 rounded-xl text-xs font-black uppercase border-2 transition-colors ${
-                          ans.answer === opt ? ANSWER_STYLE[opt] : "bg-white border-slate-200 text-slate-400 hover:border-slate-400"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-
-                  <input
-                    className="w-full p-3 rounded-xl shadow-sm border-none font-bold text-sm bg-slate-50 outline-none focus:ring-2 ring-blue-500"
-                    value={ans.notes || ""}
-                    onChange={(e) => updateAnswer(imp.id, { notes: e.target.value })}
-                    placeholder={t("notesPlaceholder")}
-                  />
-
-                  {Boolean(imp.allow_attachment) && (
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      {(ans.files || []).length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {ans.files.map((f) => (
-                            <div key={f.url} className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">
-                              <p className="text-xs text-blue-600 font-bold max-w-[220px] truncate" title={f.name}>{f.name}</p>
-                              <a href={f.url} download={f.name} className="text-blue-600 hover:text-emerald-600 bg-white p-1.5 rounded-lg shadow-sm transition-all">
-                                <Download size={13} />
-                              </a>
-                              <button onClick={() => removeFile(imp.id, f.url)} className="text-slate-400 hover:text-red-600 bg-white p-1.5 rounded-lg shadow-sm transition-all">
-                                <X size={13} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                  return (
+                    <React.Fragment key={imp.id}>
+                      {showSectionHeader && (
+                        <tr className="bg-amber-50">
+                          <td colSpan={7} className="p-3 text-xs font-black uppercase text-amber-800 tracking-wide border-t-2 border-amber-300">
+                            {sectionText}
+                          </td>
+                        </tr>
                       )}
-                      {(ans.files || []).length === 0 && <p className="text-xs text-slate-400 font-bold">{t("noFileUploaded")}</p>}
-                      <div className="relative overflow-hidden inline-block">
-                        <button className="bg-slate-900 text-white rounded-xl px-5 py-2.5 font-black text-[11px] uppercase hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 pointer-events-none">
-                          <UploadCloud size={15} /> {t("uploadFileBtn")}
-                        </button>
-                        <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(imp.id, e)} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </React.Fragment>
-            );
-          })}
-        </div>
+                      <tr className="border-t border-slate-100 even:bg-slate-50/60 align-top">
+                        <td className="p-3 text-center text-xs font-black text-slate-400">{idx + 1}</td>
+                        <td className="p-3 text-xs font-bold text-slate-800 leading-relaxed">{questionText}</td>
+                        {ANSWER_OPTIONS.map((opt) => (
+                          <td key={opt} className="p-3 text-center">
+                            <input
+                              type="radio"
+                              name={`declC-${imp.id}`}
+                              checked={ans.answer === opt}
+                              onChange={() => updateAnswer(imp.id, { answer: opt })}
+                              className="w-4 h-4 accent-rose-800 cursor-pointer"
+                            />
+                          </td>
+                        ))}
+                        <td className="p-3">
+                          <input
+                            className="w-full p-2 rounded-lg border border-slate-200 font-bold text-xs bg-white outline-none focus:ring-2 ring-blue-400"
+                            value={ans.notes || ""}
+                            onChange={(e) => updateAnswer(imp.id, { notes: e.target.value })}
+                            placeholder={t("notesPlaceholder")}
+                          />
+                        </td>
+                        <td className="p-3">
+                          {imp.allow_attachment ? (
+                            <div className="space-y-1.5">
+                              {(ans.files || []).map((f) => (
+                                <div key={f.url} className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                                  <p className="text-[10px] text-blue-600 font-bold max-w-[100px] truncate" title={f.name}>{f.name}</p>
+                                  <a href={f.url} download={f.name} className="text-blue-600 hover:text-emerald-600 shrink-0">
+                                    <Download size={12} />
+                                  </a>
+                                  <button onClick={() => removeFile(imp.id, f.url)} className="text-slate-400 hover:text-red-600 shrink-0">
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                              <div className="relative overflow-hidden inline-block">
+                                <button className="bg-slate-900 text-white rounded-lg px-3 py-1.5 font-black text-[9px] uppercase hover:bg-slate-700 transition-colors flex items-center justify-center gap-1.5 pointer-events-none">
+                                  <UploadCloud size={12} /> {t("uploadFileBtn")}
+                                </button>
+                                <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleUpload(imp.id, e)} />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

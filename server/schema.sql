@@ -92,14 +92,18 @@ CREATE TABLE IF NOT EXISTS impegni_b (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dichiarazione C: dal blocco "questionario fornitore" (domanda + risposta
--- Sì/No/N-A + note + allegato opzionale). "section" raggruppa domande
--- consecutive sotto un'intestazione comune (es. "TRASPORTO / LOGISTICA"),
--- come nei documenti questionario di riferimento; "allow_attachment"
--- decide se la domanda mostra uno slot di upload al fornitore.
+-- Sì/No/N-A + note + allegato opzionale). "section" (+ section_en/fr/es)
+-- raggruppa domande consecutive sotto un'intestazione comune (es.
+-- "TRASPORTO / LOGISTICA"), come nei documenti questionario di riferimento;
+-- "allow_attachment" decide se la domanda mostra uno slot di upload al
+-- fornitore. "section" resta la versione italiana (nome storico della
+-- colonna); section_en/fr/es sono state aggiunte dopo per permettere
+-- all'intestazione di sezione di cambiare lingua come il testo domanda.
 CREATE TABLE IF NOT EXISTS impegni_c (
   id VARCHAR(100) NOT NULL PRIMARY KEY,
   it TEXT, en TEXT, fr TEXT, es TEXT,
   section TEXT NULL,
+  section_en TEXT NULL, section_fr TEXT NULL, section_es TEXT NULL,
   allow_attachment TINYINT(1) NOT NULL DEFAULT 0,
   sort_order INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
