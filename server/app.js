@@ -4,6 +4,14 @@
 // (es. Railway) questa chiamata resta un no-op innocuo.
 require('dotenv').config();
 
+// Alcuni host (es. il container di Railway) non hanno una rotta di uscita
+// IPv6 funzionante: se un dominio esterno risolve sia A che AAAA (es.
+// smtp.office365.com), Node può scegliere l'indirizzo IPv6 e fallire con
+// ENETUNREACH anche se l'host è raggiungibile via IPv4. Preferire IPv4 in
+// fase di risoluzione DNS evita il problema per qualunque connessione in
+// uscita (SMTP, e in futuro qualunque altra API esterna).
+require('dns').setDefaultResultOrder('ipv4first');
+
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
