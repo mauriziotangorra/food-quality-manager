@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, PlusCircle, Edit3, Trash2, Save, FileText, Image as ImageIcon, UploadCloud, Download } from "lucide-react";
+import { ArrowLeft, PlusCircle, Edit3, Trash2, Save, FileText, Image as ImageIcon, UploadCloud, Download, Mail, Send } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useModal } from "../hooks/useModal";
 import { api } from "../services/api";
@@ -7,7 +7,11 @@ import { api } from "../services/api";
 const EMPTY_FORM = { id: null, name: "", status: "active", qualPass: "", techPass: "" };
 
 const NEW_IMPEGNO_A = { id: null, it: "", en: "", fr: "", es: "" };
-const NEW_IMPEGNO_C = { id: null, it: "", en: "", fr: "", es: "", section: "", allow_attachment: 0 };
+const NEW_IMPEGNO_C = {
+  id: null, it: "", en: "", fr: "", es: "",
+  section: "", section_en: "", section_fr: "", section_es: "",
+  allow_attachment: 0,
+};
 const NEW_IMPEGNO_B = {
   id: null,
   title_it: "", desc_it: "",
@@ -16,6 +20,15 @@ const NEW_IMPEGNO_B = {
   title_es: "", desc_es: "",
 };
 const NEW_ALLERGEN = { id: null, it: "", en: "", fr: "", es: "" };
+
+// Usato nell'editor del Questionario: un colore diverso per lingua rende piu'
+// facile scorrere a colpo d'occhio le 4 versioni di ogni domanda.
+const LANG_FIELDS = [
+  { code: "IT", field: "it", sectionField: "section", color: "text-slate-400" },
+  { code: "EN", field: "en", sectionField: "section_en", color: "text-blue-500" },
+  { code: "FR", field: "fr", sectionField: "section_fr", color: "text-indigo-500" },
+  { code: "ES", field: "es", sectionField: "section_es", color: "text-rose-500" },
+];
 
 export default function AdminPage({ onLogout }) {
   const { t } = useLanguage();
@@ -31,6 +44,22 @@ export default function AdminPage({ onLogout }) {
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [savingTemplates, setSavingTemplates] = useState(false);
   const [masterLogo, setMasterLogo] = useState(null);
+
+  const [testEmailAddress, setTestEmailAddress] = useState("");
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress) return;
+    setSendingTestEmail(true);
+    try {
+      await api.sendTestEmail(testEmailAddress);
+      showAlert(`Email di test inviata a ${testEmailAddress}. Controlla la casella (anche lo spam).`);
+    } catch (e) {
+      showAlert(e.message || "Errore durante l'invio dell'email di test.");
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
 
   const loadSuppliers = () => {
     setLoading(true);
@@ -208,6 +237,27 @@ export default function AdminPage({ onLogout }) {
             }`}
           >
             {t("adminTabDeclarations")}
+          </button>
+        </div>
+
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
+            <Mail size={20} className="text-blue-600" />
+            <span className="text-xs font-black uppercase text-slate-600 whitespace-nowrap">Test Email SMTP</span>
+          </div>
+          <input
+            type="email"
+            className="flex-1 p-3 bg-slate-50 rounded-xl font-bold text-sm border-none outline-none focus:ring-2 ring-blue-400"
+            placeholder="tuaemail@esempio.it"
+            value={testEmailAddress}
+            onChange={(e) => setTestEmailAddress(e.target.value)}
+          />
+          <button
+            onClick={handleSendTestEmail}
+            disabled={sendingTestEmail || !testEmailAddress}
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
+          >
+            <Send size={14} /> {sendingTestEmail ? "Invio in corso..." : "Invia Test"}
           </button>
         </div>
 
@@ -417,38 +467,65 @@ export default function AdminPage({ onLogout }) {
                       <PlusCircle size={14} /> {t("addDeclaration")}
                     </button>
                   </div>
-                  <div className="space-y-4">
-                    {globalConfig.impegniC.map((imp) => (
-                      <div key={imp.id} className="flex items-start gap-4 group bg-slate-50 p-5 rounded-2xl border border-slate-100 relative">
-                        <div className="w-full space-y-2">
-                          <input
-                            className="w-full p-2 border border-slate-200 rounded-xl text-[10px] font-black uppercase text-amber-700 outline-none focus:border-blue-500 bg-white"
-                            value={imp.section || ""}
-                            onChange={(e) => updateList("impegniC", imp.id, { section: e.target.value })}
-                            placeholder={t("declCSectionPlaceholder")}
-                          />
-                          <textarea
-                            className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
-                            value={imp.it}
-                            onChange={(e) => updateList("impegniC", imp.id, { it: e.target.value })}
-                            placeholder={t("declTextPlaceholderIt")}
-                          />
-                          <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 cursor-pointer w-fit">
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 accent-amber-600"
-                              checked={Boolean(imp.allow_attachment)}
-                              onChange={(e) => updateList("impegniC", imp.id, { allow_attachment: e.target.checked ? 1 : 0 })}
-                            />
-                            {t("declCAllowAttachment")}
-                          </label>
+                  <div className="space-y-5">
+                    {globalConfig.impegniC.map((imp, idx) => (
+                      <div key={imp.id} className="bg-slate-50 p-7 rounded-[2rem] border border-slate-200 hover:border-amber-200 transition-colors relative">
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-black text-xs flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">{t("declCTitleAdmin")}</span>
+                          </div>
+                          <button
+                            onClick={() => removeFromList("impegniC", imp.id, t("confirmDeleteDeclaration"))}
+                            className="text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl p-2 transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => removeFromList("impegniC", imp.id, t("confirmDeleteDeclaration"))}
-                          className="text-red-400 hover:text-red-600 shrink-0 p-2"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+
+                        <div className="mb-6">
+                          <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">{t("declCSectionPlaceholder")}</label>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {LANG_FIELDS.map(({ code, sectionField, color }) => (
+                              <div key={sectionField} className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-100 transition-all pl-1">
+                                <span className={`text-[9px] font-black w-7 text-center shrink-0 ${color}`}>{code}</span>
+                                <input
+                                  className="w-full py-2.5 pr-3 text-[11px] font-black uppercase text-amber-700 outline-none bg-transparent"
+                                  value={imp[sectionField] || ""}
+                                  onChange={(e) => updateList("impegniC", imp.id, { [sectionField]: e.target.value })}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mb-6">
+                          <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">{t("declTextPlaceholderIt")}</label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {LANG_FIELDS.map(({ code, field, color }) => (
+                              <div key={field} className="flex items-start gap-2 bg-white rounded-xl border border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all pl-1">
+                                <span className={`text-[9px] font-black w-7 text-center shrink-0 pt-3 ${color}`}>{code}</span>
+                                <textarea
+                                  className="w-full py-2.5 pr-3 text-xs font-bold text-slate-700 outline-none bg-transparent min-h-[72px] resize-none leading-relaxed"
+                                  value={imp[field] || ""}
+                                  onChange={(e) => updateList("impegniC", imp.id, { [field]: e.target.value })}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 cursor-pointer w-fit pt-4 border-t border-slate-200">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-amber-600"
+                            checked={Boolean(imp.allow_attachment)}
+                            onChange={(e) => updateList("impegniC", imp.id, { allow_attachment: e.target.checked ? 1 : 0 })}
+                          />
+                          {t("declCAllowAttachment")}
+                        </label>
                       </div>
                     ))}
                     {globalConfig.impegniC.length === 0 && (

@@ -52,4 +52,30 @@ async function sendQualificationSubmittedEmail({ supplierId, supplierName }) {
   }
 }
 
-module.exports = { sendQualificationSubmittedEmail };
+// Invio diagnostico da pannello admin ("Test Email"): a differenza di
+// sendQualificationSubmittedEmail, qui gli errori vanno RILANCIATI (non solo
+// loggati) cosi' la route puo' mostrare all'admin esattamente cosa non va
+// (SMTP non configurato, credenziali errate, ecc.), invece di fallire in
+// silenzio come nel flusso reale di invio qualifica.
+async function sendTestEmail(to) {
+  if (!isConfigured()) {
+    const err = new Error('SMTP non configurato: imposta SMTP_HOST, SMTP_USER e SMTP_PASSWORD (vedi .env).');
+    err.code = 'SMTP_NOT_CONFIGURED';
+    throw err;
+  }
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const sentAt = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+  const info = await getTransporter().sendMail({
+    from,
+    to,
+    subject: 'Email di test - Food Quality Manager',
+    html: `
+      <p>Questa è una email di test inviata dal pannello amministrativo per verificare la configurazione SMTP.</p>
+      <p>Se stai leggendo questo messaggio, la configurazione funziona correttamente.</p>
+      <p>Inviata il: ${sentAt}</p>
+    `
+  });
+  return info;
+}
+
+module.exports = { sendQualificationSubmittedEmail, sendTestEmail };
