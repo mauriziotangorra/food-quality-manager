@@ -48,9 +48,18 @@ router.put('/:supplierId', requireOwnerOrAdmin, async (req, res) => {
 
     const ts = lastUpdate ? new Date(lastUpdate) : new Date();
 
-    // Letto prima del salvataggio per rilevare il momento esatto in cui il
-    // dossier firmato passa da assente a presente (vedi invio email sotto).
-    const previousQualData = qualData ? await getQualData(supplierId) : null;
+    // Letti prima del salvataggio per rilevare il momento esatto in cui la
+    // qualifica passa da incompleta a completa (vedi invio email sotto): sia
+    // il dossier firmato che le specifiche tecniche vivono su record diversi
+    // (qual_dossier vs qualifications.product_specs, aggiornati da pagine
+    // diverse /qualifica e /tecnica), quindi va confrontato lo stato PRIMA
+    // di questo salvataggio con quello DOPO, non solo se questa singola
+    // chiamata ha toccato il dossier.
+    const [previousQualData, [prevRows]] = await Promise.all([
+      qualData ? getQualData(supplierId) : null,
+      pool.query('SELECT product_specs FROM qualifications WHERE supplier_id = ?', [supplierId])
+    ]);
+    const previousProductSpecs = prevRows[0]?.product_specs ? JSON.parse(prevRows[0].product_specs) : [];
 
     await pool.query(
       `INSERT INTO qualifications (supplier_id, product_specs, last_update)
@@ -65,18 +74,23 @@ router.put('/:supplierId', requireOwnerOrAdmin, async (req, res) => {
       await saveQualData(supplierId, qualData);
     }
 
-    // Il caricamento del dossier firmato e' l'ultimo passo della qualifica:
-    // appena passa da assente a presente, avvisa qualita@italianfoodpivot.it.
-    // Fire-and-forget: un problema SMTP non deve far fallire il salvataggio.
-    const hadSignedDossier = Boolean(previousQualData?.signedDossier?.fileUrl);
-    const hasSignedDossier = Boolean(qualData?.signedDossier?.fileUrl);
-    if (!hadSignedDossier && hasSignedDossier) {
+    // La qualifica si considera "completata" quando ENTRAMBE le condizioni
+    // sono vere: dossier firmato caricato (ultimo passo di /qualifica) E
+    // almeno una specifica tecnica salvata (da /tecnica, area separata).
+    // L'email va inviata una sola volta, nel momento esatto in cui si passa
+    // da "non completa" a "completa" — qualunque delle due condizioni sia
+    // stata l'ultima a verificarsi. Fire-and-forget: un problema SMTP/email
+    // non deve far fallire il salvataggio.
+    const hasSavedSpec = (specs) => Array.isArray(specs) && specs.some((s) => s?.isSaved);
+    const wasComplete = Boolean(previousQualData?.signedDossier?.fileUrl) && hasSavedSpec(previousProductSpecs);
+    const isComplete = Boolean(qualData?.signedDossier?.fileUrl) && hasSavedSpec(productSpecs);
+    if (!wasComplete && isComplete) {
       pool.query('SELECT name FROM suppliers WHERE id = ?', [supplierId])
         .then(([rows]) => sendQualificationSubmittedEmail({
           supplierId,
           supplierName: rows[0]?.name || supplierId
         }))
-        .catch((err) => console.error('Notifica dossier firmato non inviata', err));
+        .catch((err) => console.error('Notifica qualifica completata non inviata', err));
     }
 
     res.json({ ok: true, lastUpdate: ts.toISOString() });
