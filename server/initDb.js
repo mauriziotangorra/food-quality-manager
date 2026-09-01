@@ -151,6 +151,28 @@ const DEFAULT_IMPEGNI_B = [
   { id: 'rintracciabilita', title_it: "Rintracciabilità Integrale (Reg. CE 178/2002)", desc_it: "L'Azienda Fornitrice garantisce l'implementazione e l'efficacia di un sistema strutturato di rintracciabilità (in conformità al Regolamento CE 178/2002), in grado di identificare biunivocamente e in qualsiasi momento il lotto specifico di materia prima, del materiale di imballaggio primario e del prodotto finito. Si garantisce l'esecuzione di simulazioni di ritiro/richiamo dal mercato con cadenza almeno annuale.", title_en: "Full Traceability (EC Reg. 178/2002)", desc_en: "The Supplying Company guarantees the implementation and effectiveness of a structured traceability system (in compliance with EC Reg. 178/2002), capable of uniquely identifying at any time the specific batch of raw material, primary packaging material, and finished product. The execution of market withdrawal/recall simulations is guaranteed at least annually.", title_fr: "Traçabilité Intégrale (Règ. CE 178/2002)", desc_fr: "L'Entreprise Fournisseur garantit la mise en œuvre et l'efficacité d'un système de traçabilité structuré (conformément au Règlement CE 178/2002), capable d'identifier de manière univoque et à tout moment le lot spécifique de matière première, de matériau d'emballage primaire et de produit fini. L'exécution de simulations de retrait/rappel du marché est garantie au moins annuellement.", title_es: "Trazabilidad Integral (Reg. CE 178/2002)", desc_es: "La Empresa Proveedora garantiza la implementación y eficacia de un sistema de trazabilidad estructurado (de conformidad con el Reg. CE 178/2002), capaz de identificar de forma inequívoca y en cualquier momento el lote específico de materia prima, material de embalaje primario y producto terminado. Se garantiza la ejecución de simulacros de retirada/recuperación del mercado al menos anualmente." }
 ];
 
+// I 14 allergeni regolamentati (Reg. UE 1169/2011, Allegato II), usati dalla
+// griglia allergeni company-wide in Dichiarazione A. Stesso testo gia'
+// presente (ma mai collegato al DB) in ALLERGENI_DETTAGLIATI dentro
+// client/src/constants/defaults.js — gia' tradotto in tutte e 4 le lingue.
+// Seminato SOLO se la tabella allergens e' vuota, stesso criterio delle altre.
+const DEFAULT_ALLERGENI = [
+  { id: '0', it: "Cereali contenenti glutine (grano, segale, orzo, avena, farro, kamut o i loro ceppi ibridati) e prodotti derivati", en: "Cereals containing gluten (wheat, rye, barley, oats, spelt, kamut or their hybridised strains) and products thereof", fr: "Céréales contenant du gluten (blé, seigle, orge, avoine, épeautre, kamut ou leurs souches hybridées) et produits à base de ces céréales", es: "Cereales que contengan gluten (trigo, centeno, cebada, avena, espelta, kamut o sus variedades híbridas) y productos derivados" },
+  { id: '1', it: "Crostacei e prodotti a base di crostacei", en: "Crustaceans and products thereof", fr: "Crustacés et produits à base de crustacés", es: "Crustáceos y productos a base de crustáceos" },
+  { id: '2', it: "Uova e prodotti a base di uova", en: "Eggs and products thereof", fr: "Œufs et produits à base d'œufs", es: "Huevos y productos a base de huevo" },
+  { id: '3', it: "Pesce e prodotti a base di pesce", en: "Fish and products thereof", fr: "Poissons et produits à base de poissons", es: "Pescado y productos a base de pescado" },
+  { id: '4', it: "Arachidi e prodotti a base di arachidi", en: "Peanuts and products thereof", fr: "Arachides et produits à base d'arachides", es: "Cacahuetes y productos a base de cacahuetes" },
+  { id: '5', it: "Soia e prodotti a base di soia", en: "Soybeans and products thereof", fr: "Soja et produits à base de soja", es: "Soja y productos a base de soja" },
+  { id: '6', it: "Latte e prodotti a base di latte (incluso lattosio)", en: "Milk and products thereof (including lactose)", fr: "Lait et produits à base de lait (y compris le lactose)", es: "Leche y sus derivados (incluida la lactosa)" },
+  { id: '7', it: "Frutta a guscio (mandorle, nocciole, noci, noci di acagiù, noci di pecan, noci del Brasile, pistacchi, noci macadamia) e prodotti derivati", en: "Nuts, namely: almonds, hazelnuts, walnuts, cashews, pecan nuts, Brazil nuts, pistachio nuts, macadamia and products thereof", fr: "Fruits à coque, à savoir: amandes, noisettes, noix, noix de cajou, noix de pécan, noix du Brésil, pistaches, noix de Macadamia et produits à base de ces fruits", es: "Frutos de cáscara, es decir: almendras, avellanas, nueces, anacardos, pacanas, nueces de Brasil, alfóncigos, nueces macadamia y productos derivados" },
+  { id: '8', it: "Sedano e prodotti a base di sedano", en: "Celery and products thereof", fr: "Céleri et produits à base de céleri", es: "Apio y productos derivados" },
+  { id: '9', it: "Senape e prodotti a base di senape", en: "Mustard and products thereof", fr: "Moutarde et produits à base de moutarde", es: "Mostaza y productos derivados" },
+  { id: '10', it: "Semi di sesamo e prodotti a base di semi di sesamo", en: "Sesame seeds and products thereof", fr: "Graines de sésame et produits à base de graines de sésame", es: "Granos de sésamo y productos a base de granos de sésamo" },
+  { id: '11', it: "Anidride solforosa e solfiti (in concentrazioni superiori a 10 mg/kg o 10 mg/litro espressi come SO2 totale)", en: "Sulphur dioxide and sulphites at concentrations of more than 10 mg/kg or 10 mg/litre in terms of the total SO2", fr: "Anhydride sulfureux et sulfites en concentrations de plus de 10 mg/kg ou 10 mg/litre en termes de SO2 total", es: "Dióxido de azufre y sulfitos en concentraciones superiores a 10 mg/kg o 10 mg/litro en términos de SO2 total" },
+  { id: '12', it: "Lupini e prodotti a base di lupini", en: "Lupin and products thereof", fr: "Lupin et produits à base de lupin", es: "Altramuces y productos a base de altramuces" },
+  { id: '13', it: "Molluschi e prodotti a base di molluschi", en: "Molluscs and products thereof", fr: "Mollusques et produits à base de mollusques", es: "Moluscos y productos a base de moluscos" },
+];
+
 // MySQL (a differenza di MariaDB) non supporta "ALTER TABLE ... ADD COLUMN
 // IF NOT EXISTS": per aggiungere colonne a tabelle create da versioni
 // precedenti di schema.sql in modo idempotente, si verifica prima la loro
@@ -237,6 +259,20 @@ async function initDb() {
         );
       }
       console.log(`   Dichiarazione B: ${DEFAULT_IMPEGNI_B.length} parametri di riferimento inseriti (tabella impegni_b era vuota).`);
+    }
+
+    // --- Griglia Allergeni (Dichiarazione A): stesso criterio.
+    const [allergeniRows] = await connection.query('SELECT COUNT(*) AS n FROM allergens');
+    if (allergeniRows[0].n === 0) {
+      for (let i = 0; i < DEFAULT_ALLERGENI.length; i++) {
+        const item = DEFAULT_ALLERGENI[i];
+        // eslint-disable-next-line no-await-in-loop
+        await connection.query(
+          'INSERT INTO allergens (id, it, en, fr, es, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+          [item.id, item.it, item.en, item.fr, item.es, i]
+        );
+      }
+      console.log(`   Griglia Allergeni: ${DEFAULT_ALLERGENI.length} allergeni di riferimento inseriti (tabella allergens era vuota).`);
     }
 
     // --- Questionario (impegni_c): seminato SOLO se la tabella e' vuota, mai
