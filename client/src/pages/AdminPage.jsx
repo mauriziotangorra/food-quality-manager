@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, PlusCircle, Edit3, Trash2, Save, FileText, Image as ImageIcon, UploadCloud, Download, Mail, Send } from "lucide-react";
+import { ArrowLeft, PlusCircle, Edit3, Trash2, Save, FileText, Image as ImageIcon, UploadCloud, Download, Mail, Send, Languages } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useModal } from "../hooks/useModal";
 import { api } from "../services/api";
@@ -73,6 +73,27 @@ export default function AdminPage({ onLogout }) {
       showAlert(e.message || t("testEmailError"));
     } finally {
       setSendingTestEmail(false);
+    }
+  };
+
+  const [translatingMissing, setTranslatingMissing] = useState(false);
+
+  // "Seeder" per contenuto GIA' salvato in DB con lingue mancanti (es.
+  // dichiarazioni inserite prima che esistesse la traduzione automatica, o
+  // aggiunte in una sola lingua): chiama l'AI solo per le lingue vuote,
+  // non tocca mai una lingua che ha gia' un valore. Ricarica i template dopo,
+  // cosi' l'editor mostra subito il risultato.
+  const handleTranslateMissing = async () => {
+    setTranslatingMissing(true);
+    try {
+      const { summary } = await api.translateMissingSettings();
+      const updatedTotal = Object.values(summary || {}).reduce((sum, s) => sum + (s.updated || 0), 0);
+      showAlert(t("translateMissingDoneAlert").replace("{count}", updatedTotal));
+      loadTemplates();
+    } catch (e) {
+      showAlert(e.message || t("translateMissingError"));
+    } finally {
+      setTranslatingMissing(false);
     }
   };
 
@@ -250,13 +271,23 @@ export default function AdminPage({ onLogout }) {
             </button>
           )}
           {view === "declarations" && (
-            <button
-              onClick={saveTemplates}
-              disabled={savingTemplates}
-              className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50"
-            >
-              <Save size={20} /> {savingTemplates ? t("savingEllipsis") : t("adminSaveDeclarations")}
-            </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={handleTranslateMissing}
+                disabled={translatingMissing}
+                title={t("translateMissingHint")}
+                className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50"
+              >
+                <Languages size={20} /> {translatingMissing ? t("translatingEllipsis") : t("translateMissingBtn")}
+              </button>
+              <button
+                onClick={saveTemplates}
+                disabled={savingTemplates}
+                className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-emerald-700 flex items-center gap-2 disabled:opacity-50"
+              >
+                <Save size={20} /> {savingTemplates ? t("savingEllipsis") : t("adminSaveDeclarations")}
+              </button>
+            </div>
           )}
         </div>
 

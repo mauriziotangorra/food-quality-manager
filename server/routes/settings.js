@@ -1,6 +1,6 @@
 const express = require('express');
-const { requireAuth } = require('../middleware/auth');
-const { getGlobalSettings, saveGlobalSettings } = require('../services/settingsService');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { getGlobalSettings, saveGlobalSettings, translateMissingInStore } = require('../services/settingsService');
 
 const router = express.Router();
 
@@ -34,6 +34,24 @@ router.put('/', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings', err);
     res.status(500).json({ error: 'Errore nel salvataggio delle impostazioni' });
+  }
+});
+
+// POST /api/settings/translate-missing -> "seeder" on-demand: traduce con
+// l'AI le sole lingue mancanti nelle dichiarazioni/questionario/allergeni
+// GIA' presenti in DB (es. contenuto inserito prima che esistesse questa
+// funzione, o inserito solo in una lingua). Non tocca mai una lingua che ha
+// gia' un valore. Solo admin, per lo stesso motivo di PUT /api/settings.
+router.post('/translate-missing', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const summary = await translateMissingInStore();
+    res.json({ ok: true, summary });
+  } catch (err) {
+    console.error('POST /api/settings/translate-missing', err);
+    if (err.code === 'AI_NOT_CONFIGURED') {
+      return res.status(503).json({ error: err.message });
+    }
+    res.status(500).json({ error: err.message || 'Errore durante la traduzione automatica' });
   }
 });
 
