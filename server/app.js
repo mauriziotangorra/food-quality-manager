@@ -89,6 +89,29 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
   });
+
+  // Traduzione automatica delle dichiarazioni/questionario/allergeni gia' in
+  // DB con lingue mancanti (es. inserite prima che esistesse questa
+  // funzione): girata QUI, dopo che il server e' gia' in ascolto, non prima —
+  // sono chiamate AI potenzialmente lente, non devono ritardare/bloccare
+  // l'avvio del servizio ne' un eventuale healthcheck di deploy. Idempotente
+  // (non tocca mai una lingua che ha gia' un valore): se si interrompe a
+  // metà o fallisce, il prossimo avvio riprende da dove aveva lasciato senza
+  // ripetere lavoro già fatto. Se GEMINI_API_KEY non è configurata, salta
+  // silenziosamente: la traduzione resta un miglioramento automatico, mai un
+  // requisito per il funzionamento dell'app.
+  const { translateMissingInStore } = require('./services/settingsService');
+  translateMissingInStore()
+    .then((summary) => {
+      const updatedTotal = Object.values(summary).reduce((sum, s) => sum + s.updated, 0);
+      if (updatedTotal) {
+        console.log(`🌐 Traduzione automatica all'avvio: ${updatedTotal} elementi aggiornati.`, summary);
+      }
+    })
+    .catch((err) => {
+      if (err.code === 'AI_NOT_CONFIGURED') return; // nessun GEMINI_API_KEY: normale, non un errore
+      console.warn(`⚠️  Traduzione automatica all'avvio saltata: ${err.message}`);
+    });
 }
 
 startServer();
