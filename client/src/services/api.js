@@ -94,6 +94,7 @@ export const api = {
   getSettings: () => request('/api/settings'),
   saveSettings: (data) =>
     request('/api/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  translateMissingSettings: () => request('/api/settings/translate-missing', { method: 'POST' }),
 
   // Qualifiche fornitore (qualData + productSpecs)
   getQualifications: (supplierId) =>
