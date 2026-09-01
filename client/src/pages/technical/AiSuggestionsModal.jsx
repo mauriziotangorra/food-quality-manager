@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Sparkles, X, Check } from "lucide-react";
+import { useLanguage } from "../../hooks/useLanguage";
 
 const LOGISTICS_FIELDS = [
   { group: "uvc", key: "ean", label: "EAN UVC" },
@@ -37,12 +38,12 @@ const NUTRITION_FIELDS = [
   { key: "salt", label: "Sale" },
 ];
 
-const DOC_TITLES = {
-  logistica: "Scheda Logistica",
-  microbiologici: "Analisi Microbiologiche",
-  chimici: "Analisi Chimico-Fisiche",
-  etichetta: "Etichetta Prodotto",
-  tecnica: "Scheda Tecnica",
+const DOC_TITLE_KEYS = {
+  logistica: "aiDocTitleLogistica",
+  microbiologici: "aiDocTitleMicrobiologici",
+  chimici: "aiDocTitleChimici",
+  etichetta: "aiDocTitleEtichetta",
+  tecnica: "aiDocTitleTecnica",
 };
 
 const TECNICA_FIELDS = [
@@ -86,6 +87,7 @@ function Field({ label, value, onChange, included, onToggle, multiline }) {
 }
 
 export default function AiSuggestionsModal({ docType, data, globalConfig, onApply, onClose }) {
+  const { t } = useLanguage();
   // Copia locale editabile + flag "included" per ogni campo/riga: la revisione
   // umana è obbligatoria prima che qualunque valore venga scritto nella scheda
   // (l'AI qui propone soltanto, non salva mai da sola).
@@ -194,21 +196,20 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
       <div className="bg-white rounded-[2rem] p-8 max-w-4xl w-full shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[85vh]">
         <div className="flex justify-between items-center mb-2 border-b border-slate-200 pb-4 shrink-0">
           <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-            <Sparkles className="text-blue-600" /> Suggerimenti AI — {DOC_TITLES[docType] || docType}
+            <Sparkles className="text-blue-600" /> {t("aiSuggestionsTitle")} — {t(DOC_TITLE_KEYS[docType]) || docType}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-900 bg-slate-100 p-2 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
         <p className="text-xs font-bold text-slate-500 mb-4 shrink-0">
-          L'AI ha letto il documento caricato e propone questi valori. Controlla, correggi se necessario e deseleziona ciò che non vuoi importare,
-          poi conferma. I campi non vengono salvati automaticamente: dovrai comunque premere "Salva Specifica".
+          {t("aiSuggestionsDesc")}
         </p>
 
         <div className="overflow-y-auto pr-2 flex-1 space-y-6">
           {!hasAnyData && (
             <p className="text-sm font-bold text-slate-400 text-center py-10">
-              Nessun dato riconosciuto in modo affidabile in questo documento. Puoi chiudere e compilare i campi manualmente.
+              {t("aiNoDataFound")}
             </p>
           )}
 
@@ -217,7 +218,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
               {["uvc", "box", "pallet"].map((group) => (
                 <div key={group} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
                   <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">
-                    {group === "uvc" ? "UVC" : group === "box" ? "Cartone" : "Pallet"}
+                    {group === "uvc" ? t("logUvc") : group === "box" ? t("logCarton") : t("logPallet")}
                   </h4>
                   {LOGISTICS_FIELDS.filter((f) => f.group === group).map((f) => (
                     <Field
@@ -245,10 +246,10 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
             <div className="space-y-2">
               <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-slate-400 px-2 uppercase">
                 <span className="col-span-1" />
-                <span className="col-span-4">Parametro</span>
-                <span className="col-span-2">Limite</span>
-                <span className="col-span-2">Risultato</span>
-                <span className="col-span-3">Conforme</span>
+                <span className="col-span-4">{t("logParam")}</span>
+                <span className="col-span-2">{t("aiColLimit")}</span>
+                <span className="col-span-2">{t("aiColResult")}</span>
+                <span className="col-span-3">{t("aiColCompliant")}</span>
               </div>
               {rows.map((r, idx) => (
                 <div key={idx} className={`grid grid-cols-12 gap-2 items-center p-2 rounded-xl ${r.included ? "bg-white border border-slate-100" : "bg-slate-100 opacity-50"}`}>
@@ -278,7 +279,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
                 <div className={`p-4 rounded-2xl border ${ingredients.included ? "bg-white border-slate-200" : "bg-slate-100 opacity-50 border-slate-100"}`}>
                   <div className="flex items-center gap-3 mb-2">
                     <input type="checkbox" className="w-4 h-4 accent-blue-600" checked={ingredients.included} onChange={() => setIngredients((p) => ({ ...p, included: !p.included }))} />
-                    <label className="text-[10px] font-black uppercase text-slate-500">Elenco Ingredienti</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500">{t("aiIngredientsList")}</label>
                   </div>
                   <textarea
                     disabled={!ingredients.included}
@@ -291,7 +292,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
 
               {Object.values(nutrition.included).some(Boolean) && (
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Tabella Nutrizionale (per 100g/100ml)</h4>
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">{t("aiNutritionTableTitle")}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     {NUTRITION_FIELDS.filter((f) => nutrition.values?.[f.key]).map((f) => (
                       <Field
@@ -309,7 +310,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
 
               {allergens.length > 0 && (
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Allergeni Rilevati</h4>
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">{t("aiAllergensDetected")}</h4>
                   {allergens.map((a, idx) => (
                     <div key={a.id} className={`flex items-center gap-3 p-2 rounded-xl ${a.included ? "bg-white" : "bg-slate-100 opacity-50"}`}>
                       <input
@@ -339,12 +340,12 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
             <div className="space-y-6">
               {Object.values(tecnicaFields.included).some(Boolean) && (
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Dati Commerciali</h4>
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">{t("aiCommercialData")}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {TECNICA_FIELDS.filter((f) => tecnicaFields.values?.[f.key]).map((f) => (
                       <Field
                         key={f.key}
-                        label={f.label}
+                        label={t(f.key)}
                         multiline={f.multiline}
                         value={tecnicaFields.values?.[f.key]}
                         included={tecnicaFields.included[f.key]}
@@ -358,7 +359,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
 
               {Object.values(tecnicaNutrition.included).some(Boolean) && (
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Tabella Nutrizionale (per 100g/100ml)</h4>
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">{t("aiNutritionTableTitle")}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     {NUTRITION_FIELDS.filter((f) => tecnicaNutrition.values?.[f.key]).map((f) => (
                       <Field
@@ -376,12 +377,12 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
 
               {Object.values(tecnicaOrganoleptic.included).some(Boolean) && (
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Caratteristiche Organolettiche</h4>
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">{t("aiOrganolepticChars")}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {TECNICA_ORGANOLEPTIC_FIELDS.filter((f) => tecnicaOrganoleptic.values?.[f.key]).map((f) => (
                       <Field
                         key={f.key}
-                        label={f.label}
+                        label={t(f.key)}
                         value={tecnicaOrganoleptic.values?.[f.key]}
                         included={tecnicaOrganoleptic.included[f.key]}
                         onToggle={() => setTecnicaOrganoleptic((prev) => ({ ...prev, included: { ...prev.included, [f.key]: !prev.included[f.key] } }))}
@@ -394,11 +395,11 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
 
               {(tecnicaGmo.includedContains || tecnicaGmo.includedStatement) && (
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Dichiarazione OGM</h4>
+                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">{t("aiGmoDeclaration")}</h4>
                   {tecnicaGmo.includedContains && (
                     <div className="flex items-center gap-3 p-2 bg-white rounded-xl">
                       <input type="checkbox" className="w-4 h-4 accent-blue-600" checked={tecnicaGmo.includedContains} onChange={() => setTecnicaGmo((p) => ({ ...p, includedContains: !p.includedContains }))} />
-                      <label className="text-[9px] font-black uppercase text-slate-400 flex-1">Contiene OGM?</label>
+                      <label className="text-[9px] font-black uppercase text-slate-400 flex-1">{t("containsGmo")}</label>
                       <select
                         className="p-2 bg-slate-50 rounded-lg text-[10px] font-bold outline-none"
                         value={tecnicaGmo.containsGmo}
@@ -413,7 +414,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
                     <div className="flex items-start gap-3 p-2 bg-white rounded-xl">
                       <input type="checkbox" className="w-4 h-4 accent-blue-600 mt-1" checked={tecnicaGmo.includedStatement} onChange={() => setTecnicaGmo((p) => ({ ...p, includedStatement: !p.includedStatement }))} />
                       <div className="flex-1">
-                        <label className="text-[9px] font-black uppercase text-slate-400 block">Testo Dichiarazione</label>
+                        <label className="text-[9px] font-black uppercase text-slate-400 block">{t("aiDeclarationText")}</label>
                         <textarea
                           className="w-full bg-transparent text-xs font-bold text-slate-800 outline-none resize-none h-14"
                           value={tecnicaGmo.statement}
@@ -430,14 +431,14 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
 
         <div className="flex justify-end gap-3 pt-6 mt-2 border-t border-slate-200 shrink-0">
           <button onClick={onClose} className="px-6 py-3 rounded-xl text-xs font-black uppercase text-slate-500 hover:bg-slate-100 transition-colors">
-            Ignora
+            {t("aiIgnore")}
           </button>
           <button
             onClick={handleApply}
             disabled={!hasAnyData}
             className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-xs font-black uppercase hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Check size={16} /> Applica alla Scheda
+            <Check size={16} /> {t("aiApplyToSpec")}
           </button>
         </div>
       </div>

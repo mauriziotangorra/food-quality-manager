@@ -10,10 +10,14 @@ const SALT_ROUNDS = 10;
 
 // Converte le colonne MySQL (snake_case) nelle proprietà usate dal client (camelCase).
 // Le password (hash) non vengono mai restituite al client.
+const QUALIFICATION_STATUSES = new Set(['not_qualified', 'under_review', 'qualified']);
+
 const mapRow = (r) => ({
   id: r.id,
   name: r.name,
   status: r.status,
+  qualificationStatus: r.qualification_status || 'not_qualified',
+  qualificationNotes: r.qualification_notes || '',
   createdAt: r.created_at
 });
 
@@ -39,7 +43,7 @@ async function isPasswordInUse(password, excludeId) {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, name, status, created_at FROM suppliers ORDER BY name ASC'
+      'SELECT id, name, status, qualification_status, qualification_notes, created_at FROM suppliers ORDER BY name ASC'
     );
     res.json({ suppliers: rows.map(mapRow) });
   } catch (err) {
@@ -127,6 +131,42 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/suppliers/:id', err);
     res.status(500).json({ error: "Errore nell'aggiornamento del fornitore" });
+  }
+});
+
+// PATCH /api/suppliers/:id/qualification-status -> aggiorna solo stato di
+// avanzamento qualifica + note interne admin. Endpoint separato da PUT /:id
+// (che gestisce nome/password/status di login) cosi' la tabella qualifiche
+// nell'area admin puo' salvare inline senza toccare il resto del profilo.
+router.patch('/:id/qualification-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { qualificationStatus, qualificationNotes } = req.body || {};
+
+    if (qualificationStatus !== undefined && !QUALIFICATION_STATUSES.has(qualificationStatus)) {
+      return res.status(400).json({ error: 'Stato qualifica non valido.' });
+    }
+
+    const sets = [];
+    const params = [];
+    if (qualificationStatus !== undefined) { sets.push('qualification_status = ?'); params.push(qualificationStatus); }
+    if (qualificationNotes !== undefined) { sets.push('qualification_notes = ?'); params.push(qualificationNotes); }
+    if (!sets.length) return res.status(400).json({ error: 'Nessun campo da aggiornare.' });
+    params.push(id);
+
+    const [result] = await pool.query(`UPDATE suppliers SET ${sets.join(', ')} WHERE id = ?`, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Fornitore non trovato' });
+    }
+
+    const [rows] = await pool.query(
+      'SELECT id, name, status, qualification_status, qualification_notes, created_at FROM suppliers WHERE id = ?',
+      [id]
+    );
+    res.json({ supplier: mapRow(rows[0]) });
+  } catch (err) {
+    console.error('PATCH /api/suppliers/:id/qualification-status', err);
+    res.status(500).json({ error: 'Errore nel salvataggio dello stato qualifica' });
   }
 });
 

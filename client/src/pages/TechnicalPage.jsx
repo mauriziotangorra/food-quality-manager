@@ -163,7 +163,7 @@ export default function TechnicalPage({ onLogout }) {
           impegniB: settingsData?.settings?.templates?.impegniB || [],
         });
       })
-      .catch((e) => showAlert(e.message || "Errore nel caricamento dei dati"))
+      .catch((e) => showAlert(e.message || t("genericLoadError")))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supplier?.id]);
@@ -179,7 +179,7 @@ export default function TechnicalPage({ onLogout }) {
       });
       setLastSyncTime(timestamp.toLocaleString(lang));
     } catch (e) {
-      showAlert(e.message || "Errore durante il salvataggio");
+      showAlert(e.message || t("genericSaveError"));
     }
   };
 
@@ -325,7 +325,7 @@ export default function TechnicalPage({ onLogout }) {
     } catch (err) {
       // AI non configurata: nessun disturbo per il fornitore, è una feature opzionale.
       if (err.code !== "AI_NOT_CONFIGURED") {
-        showAlert(`Lettura automatica del documento non riuscita: ${err.message}`);
+        showAlert(t("aiExtractionFailed").replace("{error}", err.message));
       }
     } finally {
       setAiLoading(false);
@@ -419,7 +419,7 @@ export default function TechnicalPage({ onLogout }) {
     }
 
     setAiSuggestion(null);
-    showAlert("Suggerimenti applicati alla scheda. Ricontrolla i campi evidenziati e salva quando pronto.");
+    showAlert(t("aiSuggestionsAppliedAlert"));
   };
 
   const removeSpecFile = (specId, fieldName, idx) => {
@@ -470,8 +470,8 @@ export default function TechnicalPage({ onLogout }) {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4">
           <div className="bg-white rounded-[3rem] p-12 max-w-sm w-full shadow-2xl flex flex-col items-center justify-center text-center border-4 border-blue-100">
             <Loader2 className="animate-spin text-blue-600 mb-8" size={80} strokeWidth={2} />
-            <h3 className="text-2xl font-black text-slate-900 mb-3 uppercase tracking-tighter">Caricamento...</h3>
-            <p className="text-sm font-bold text-slate-500 leading-relaxed">Il sistema sta elaborando e convertendo il documento...</p>
+            <h3 className="text-2xl font-black text-slate-900 mb-3 uppercase tracking-tighter">{t("loading")}</h3>
+            <p className="text-sm font-bold text-slate-500 leading-relaxed">{t("extractingDocDesc")}</p>
           </div>
         </div>
       )}
@@ -480,8 +480,8 @@ export default function TechnicalPage({ onLogout }) {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4">
           <div className="bg-white rounded-[3rem] p-12 max-w-sm w-full shadow-2xl flex flex-col items-center justify-center text-center border-4 border-blue-100">
             <Loader2 className="animate-spin text-blue-600 mb-8" size={80} strokeWidth={2} />
-            <h3 className="text-2xl font-black text-slate-900 mb-3 uppercase tracking-tighter">Analisi AI in corso...</h3>
-            <p className="text-sm font-bold text-slate-500 leading-relaxed">L'AI sta leggendo il documento e preparando i campi da compilare...</p>
+            <h3 className="text-2xl font-black text-slate-900 mb-3 uppercase tracking-tighter">{t("aiAnalyzingTitle")}</h3>
+            <p className="text-sm font-bold text-slate-500 leading-relaxed">{t("aiAnalyzingDesc")}</p>
           </div>
         </div>
       )}
@@ -564,7 +564,7 @@ export default function TechnicalPage({ onLogout }) {
         </div>
 
         {loading ? (
-          <div className="text-center text-slate-400 font-bold py-20">Caricamento...</div>
+          <div className="text-center text-slate-400 font-bold py-20">{t("loading")}</div>
         ) : (
           <div className="space-y-8">
             {productSpecs

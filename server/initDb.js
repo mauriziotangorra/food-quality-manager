@@ -85,6 +85,8 @@ async function initDb() {
     await addColumnIfMissing(connection, dbName, 'impegni_c', 'section_fr', 'TEXT NULL');
     await addColumnIfMissing(connection, dbName, 'impegni_c', 'section_es', 'TEXT NULL');
     await addColumnIfMissing(connection, dbName, 'qual_raw_materials', 'notes', 'TEXT NULL');
+    await addColumnIfMissing(connection, dbName, 'suppliers', 'qualification_status', "VARCHAR(50) NOT NULL DEFAULT 'not_qualified'");
+    await addColumnIfMissing(connection, dbName, 'suppliers', 'qualification_notes', 'TEXT NULL');
 
     // --- Questionario (impegni_c): seminato SOLO se la tabella e' vuota, mai
     // se contiene gia' qualcosa (anche una sola domanda di test) — l'admin
