@@ -97,9 +97,9 @@ export default function DeclarationCTab({ t, lang, qualData, setQualData, global
                 <tr className="bg-rose-950 text-white">
                   <th className="p-3 text-[10px] font-black uppercase w-12">{t("declCColNo")}</th>
                   <th className="p-3 text-[10px] font-black uppercase text-left">{t("declCColQuestion")}</th>
-                  <th className="p-3 text-[10px] font-black uppercase w-16">Sì</th>
-                  <th className="p-3 text-[10px] font-black uppercase w-16">No</th>
-                  <th className="p-3 text-[10px] font-black uppercase w-16">N/A</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-16">{t("declCColYes")}</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-16">{t("declCColAnswerNo")}</th>
+                  <th className="p-3 text-[10px] font-black uppercase w-16">{t("declCColNA")}</th>
                   <th className="p-3 text-[10px] font-black uppercase w-64">{t("declCColNotes")}</th>
                   <th className="p-3 text-[10px] font-black uppercase w-40">{t("declCColAttachment")}</th>
                 </tr>

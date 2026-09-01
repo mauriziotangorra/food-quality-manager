@@ -114,5 +114,12 @@ export const api = {
       body: JSON.stringify(data)
     }),
   deleteSupplier: (id) =>
-    request(`/api/suppliers/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    request(`/api/suppliers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  // Aggiorna solo stato avanzamento qualifica + note interne admin (tabella
+  // qualifiche), senza toccare nome/password del fornitore.
+  updateSupplierQualification: (id, data) =>
+    request(`/api/suppliers/${encodeURIComponent(id)}/qualification-status`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    })
 };

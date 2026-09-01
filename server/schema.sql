@@ -14,12 +14,21 @@ USE food_quality_manager;
 --    Mappa: artifacts/<appId>/public/data/suppliers
 --    qual_pass / tech_pass contengono hash bcrypt (non plaintext)
 -- ------------------------------------------------------------
+-- "status" e' l'abilitazione al login (attivo/disattivo), NON lo stato di
+-- avanzamento della qualifica: NON riusare per quello, altrimenti un
+-- fornitore "non ancora qualificato" o "in revisione" verrebbe bloccato dal
+-- login (vedi WHERE status = 'active' in routes/auth.js). Lo stato di
+-- avanzamento vive separatamente in qualification_status (+ note interne
+-- admin in qualification_notes), aggiunte dopo la creazione iniziale della
+-- tabella — vedi addColumnIfMissing in initDb.js.
 CREATE TABLE IF NOT EXISTS suppliers (
   id         VARCHAR(64)  NOT NULL PRIMARY KEY,
   name       VARCHAR(255) NOT NULL,
   qual_pass  VARCHAR(255) NOT NULL DEFAULT '',
   tech_pass  VARCHAR(255) NOT NULL DEFAULT '',
   status     VARCHAR(50)  NOT NULL DEFAULT 'active',
+  qualification_status VARCHAR(50) NOT NULL DEFAULT 'not_qualified',
+  qualification_notes  TEXT NULL,
   created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

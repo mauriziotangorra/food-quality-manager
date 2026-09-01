@@ -27,7 +27,7 @@ export default function LoginPage({ area, onBack, onSuccess }) {
       // (backend non raggiungibile, errore di rete, 500...) invece di mostrare
       // sempre lo stesso messaggio generico.
       const isAuthError = /credenziali|password non valida|401/i.test(e.message || "");
-      showAlert(isAuthError ? t("alertWrongPwd") : `${t("alertWrongPwd")}\n\n(${e.message || "Errore di connessione al server"})`);
+      showAlert(isAuthError ? t("alertWrongPwd") : `${t("alertWrongPwd")}\n\n(${e.message || t("connectionError")})`);
     } finally {
       setLoading(false);
     }

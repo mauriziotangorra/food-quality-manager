@@ -23,6 +23,15 @@ const NEW_ALLERGEN = { id: null, it: "", en: "", fr: "", es: "" };
 
 // Usato nell'editor del Questionario: un colore diverso per lingua rende piu'
 // facile scorrere a colpo d'occhio le 4 versioni di ogni domanda.
+// Stato di avanzamento della qualifica (tabella fornitori, area admin) —
+// distinto dal campo "status" del fornitore, che invece abilita/disabilita
+// il login e non va toccato qui.
+const QUALIFICATION_STATUS_OPTIONS = [
+  { value: "not_qualified", labelKey: "qualStatusNotQualified", color: "bg-red-100 text-red-700" },
+  { value: "under_review", labelKey: "qualStatusUnderReview", color: "bg-amber-100 text-amber-700" },
+  { value: "qualified", labelKey: "qualStatusQualified", color: "bg-emerald-100 text-emerald-700" },
+];
+
 const LANG_FIELDS = [
   { code: "IT", field: "it", sectionField: "section", color: "text-slate-400" },
   { code: "EN", field: "en", sectionField: "section_en", color: "text-blue-500" },
@@ -31,7 +40,13 @@ const LANG_FIELDS = [
 ];
 
 export default function AdminPage({ onLogout }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  // L'editor mostra/edita UN SOLO campo alla volta, quello della lingua
+  // attualmente selezionata nello switcher globale (in basso a destra):
+  // cambiando lingua il contenuto del campo cambia (mostra il valore salvato
+  // per quella lingua, vuoto se non ancora tradotto), non tutte e 4 insieme.
+  const langKey = lang.toLowerCase();
+  const activeLangField = LANG_FIELDS.find((f) => f.field === langKey) || LANG_FIELDS[0];
   const { showAlert, showConfirm } = useModal();
 
   const [view, setView] = useState("suppliers"); // 'suppliers' | 'declarations'
@@ -53,9 +68,9 @@ export default function AdminPage({ onLogout }) {
     setSendingTestEmail(true);
     try {
       await api.sendTestEmail(testEmailAddress);
-      showAlert(`Email di test inviata a ${testEmailAddress}. Controlla la casella (anche lo spam).`);
+      showAlert(t("testEmailSentAlert").replace("{email}", testEmailAddress));
     } catch (e) {
-      showAlert(e.message || "Errore durante l'invio dell'email di test.");
+      showAlert(e.message || t("testEmailError"));
     } finally {
       setSendingTestEmail(false);
     }
@@ -114,6 +129,30 @@ export default function AdminPage({ onLogout }) {
       showAlert(t("adminSupplierSaved"));
     } catch (e) {
       showAlert(e.message || t("adminSaveSupplierError"));
+    }
+  };
+
+  // Tabella stato qualifica: salvataggio inline, senza aprire il form di
+  // modifica completo (nome/password). Lo stato si salva subito al cambio
+  // selezione; le note al blur, per non spammare richieste ad ogni carattere.
+  const saveQualificationStatus = async (id, value) => {
+    setSuppliers((prev) => prev.map((s) => (s.id === id ? { ...s, qualificationStatus: value } : s)));
+    try {
+      await api.updateSupplierQualification(id, { qualificationStatus: value });
+    } catch (e) {
+      showAlert(e.message || t("qualStatusSaveError"));
+    }
+  };
+
+  const updateQualificationNotesDraft = (id, value) => {
+    setSuppliers((prev) => prev.map((s) => (s.id === id ? { ...s, qualificationNotes: value } : s)));
+  };
+
+  const saveQualificationNotes = async (id, value) => {
+    try {
+      await api.updateSupplierQualification(id, { qualificationNotes: value });
+    } catch (e) {
+      showAlert(e.message || t("qualNotesSaveError"));
     }
   };
 
@@ -193,11 +232,11 @@ export default function AdminPage({ onLogout }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-10 font-sans text-slate-900">
-      <div className="max-w-7xl mx-auto space-y-12">
-        <div className="flex justify-between items-center">
-          <h2 className="text-5xl font-black flex items-center gap-6">
-            <button onClick={onLogout} className="p-4 bg-white rounded-3xl shadow hover:bg-slate-100 transition-all">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-10 font-sans text-slate-900">
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-12">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <h2 className="text-2xl md:text-5xl font-black flex items-center gap-3 md:gap-6">
+            <button onClick={onLogout} className="p-3 md:p-4 bg-white rounded-3xl shadow hover:bg-slate-100 transition-all shrink-0">
               <ArrowLeft size={32} />
             </button>
             {t("admin")}
@@ -243,7 +282,7 @@ export default function AdminPage({ onLogout }) {
         <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-3">
           <div className="flex items-center gap-3 shrink-0">
             <Mail size={20} className="text-blue-600" />
-            <span className="text-xs font-black uppercase text-slate-600 whitespace-nowrap">Test Email SMTP</span>
+            <span className="text-xs font-black uppercase text-slate-600 whitespace-nowrap">{t("testEmailLabel")}</span>
           </div>
           <input
             type="email"
@@ -257,7 +296,7 @@ export default function AdminPage({ onLogout }) {
             disabled={sendingTestEmail || !testEmailAddress}
             className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
           >
-            <Send size={14} /> {sendingTestEmail ? "Invio in corso..." : "Invia Test"}
+            <Send size={14} /> {sendingTestEmail ? t("sendingTestEmail") : t("sendTestEmailBtn")}
           </button>
         </div>
 
@@ -306,6 +345,8 @@ export default function AdminPage({ onLogout }) {
                   <tr>
                     <th className="p-10">{t("adminCompanyCol")}</th>
                     <th className="p-10">{t("adminStatusCol")}</th>
+                    <th className="p-10">{t("adminQualStatusCol")}</th>
+                    <th className="p-10 min-w-[220px]">{t("adminNotesCol")}</th>
                     <th className="p-10 text-right">{t("adminActionsCol")}</th>
                   </tr>
                 </thead>
@@ -314,6 +355,28 @@ export default function AdminPage({ onLogout }) {
                     <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-10 font-black text-2xl uppercase tracking-tighter leading-none">{s.name}</td>
                       <td className="p-10 font-bold text-slate-500 uppercase text-xs">{s.status}</td>
+                      <td className="p-10">
+                        <select
+                          value={s.qualificationStatus || "not_qualified"}
+                          onChange={(e) => saveQualificationStatus(s.id, e.target.value)}
+                          className={`p-2.5 rounded-xl text-[10px] font-black uppercase outline-none border-none cursor-pointer ${
+                            QUALIFICATION_STATUS_OPTIONS.find((o) => o.value === (s.qualificationStatus || "not_qualified"))?.color || "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {QUALIFICATION_STATUS_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-10">
+                        <textarea
+                          className="w-full min-w-[200px] p-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-50 border-none outline-none focus:ring-2 ring-blue-400 resize-none h-16"
+                          value={s.qualificationNotes || ""}
+                          onChange={(e) => updateQualificationNotesDraft(s.id, e.target.value)}
+                          onBlur={(e) => saveQualificationNotes(s.id, e.target.value)}
+                          placeholder={t("adminQualNotesPlaceholder")}
+                        />
+                      </td>
                       <td className="p-10 text-right space-x-4">
                         <button
                           onClick={() => setForm({ id: s.id, name: s.name, status: s.status, qualPass: "", techPass: "" })}
@@ -332,7 +395,7 @@ export default function AdminPage({ onLogout }) {
                   ))}
                   {!loading && suppliers.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="p-10 text-center text-slate-400 font-bold">{t("adminNoSuppliers")}</td>
+                      <td colSpan={5} className="p-10 text-center text-slate-400 font-bold">{t("adminNoSuppliers")}</td>
                     </tr>
                   )}
                 </tbody>
@@ -348,7 +411,7 @@ export default function AdminPage({ onLogout }) {
             ) : (
               <>
                 {/* Logo Ufficiale */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
+                <div className="bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-3 border-b-2 border-slate-100 pb-4 mb-8">
                     <ImageIcon size={24} className="text-blue-600" />
                     <h4 className="text-2xl font-black uppercase text-slate-800">{t("officialLogo")}</h4>
@@ -375,26 +438,34 @@ export default function AdminPage({ onLogout }) {
                 </div>
 
                 {/* Dichiarazione A */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
+                <div className="bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8 gap-3 flex-wrap">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
                       <FileText size={24} /> {t("declATitleAdmin")}
                     </h4>
-                    <button
-                      onClick={() => addToList("impegniA", NEW_IMPEGNO_A)}
-                      className="text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-emerald-100 flex items-center gap-2"
-                    >
-                      <PlusCircle size={14} /> {t("addCommitment")}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 ${activeLangField.color}`}>
+                        {t("editingLanguage")}: {activeLangField.code}
+                      </span>
+                      <button
+                        onClick={() => addToList("impegniA", NEW_IMPEGNO_A)}
+                        className="text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-emerald-100 flex items-center gap-2"
+                      >
+                        <PlusCircle size={14} /> {t("addCommitment")}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-4">
-                    {globalConfig.impegniA.map((imp) => (
+                    {globalConfig.impegniA.map((imp, idx) => (
                       <div key={imp.id} className="flex items-start gap-4 group bg-slate-50 p-5 rounded-2xl border border-slate-100 relative">
+                        <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 font-black text-xs flex items-center justify-center shrink-0 mt-1">
+                          {idx + 1}
+                        </span>
                         <textarea
-                          className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
-                          value={imp.it}
-                          onChange={(e) => updateList("impegniA", imp.id, { it: e.target.value })}
-                          placeholder={t("declTextPlaceholderIt")}
+                          className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-emerald-500 min-h-[60px] resize-none bg-white"
+                          value={imp[langKey] || ""}
+                          onChange={(e) => updateList("impegniA", imp.id, { [langKey]: e.target.value })}
+                          placeholder={t("declTranslationMissingPlaceholder")}
                         />
                         <button
                           onClick={() => removeFromList("impegniA", imp.id, t("confirmDeleteCommitment"))}
@@ -411,33 +482,41 @@ export default function AdminPage({ onLogout }) {
                 </div>
 
                 {/* Dichiarazione B */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
+                <div className="bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8 gap-3 flex-wrap">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
                       <FileText size={24} /> {t("declBTitleAdmin")}
                     </h4>
-                    <button
-                      onClick={() => addToList("impegniB", NEW_IMPEGNO_B)}
-                      className="text-blue-600 bg-blue-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-blue-100 flex items-center gap-2"
-                    >
-                      <PlusCircle size={14} /> {t("addParameter")}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 ${activeLangField.color}`}>
+                        {t("editingLanguage")}: {activeLangField.code}
+                      </span>
+                      <button
+                        onClick={() => addToList("impegniB", NEW_IMPEGNO_B)}
+                        className="text-blue-600 bg-blue-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-blue-100 flex items-center gap-2"
+                      >
+                        <PlusCircle size={14} /> {t("addParameter")}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-4">
-                    {globalConfig.impegniB.map((imp) => (
+                    {globalConfig.impegniB.map((imp, idx) => (
                       <div key={imp.id} className="flex items-start gap-4 group bg-slate-50 p-5 rounded-2xl border border-slate-100 relative">
+                        <span className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-black text-xs flex items-center justify-center shrink-0 mt-1">
+                          {idx + 1}
+                        </span>
                         <div className="w-full space-y-2">
                           <input
                             className="w-full p-2 border border-slate-200 rounded-xl text-sm font-black text-slate-900 outline-none focus:border-blue-500 bg-white"
-                            value={imp.title_it}
-                            onChange={(e) => updateList("impegniB", imp.id, { title_it: e.target.value })}
-                            placeholder={t("paramTitlePlaceholderIt")}
+                            value={imp[`title_${langKey}`] || ""}
+                            onChange={(e) => updateList("impegniB", imp.id, { [`title_${langKey}`]: e.target.value })}
+                            placeholder={t("declTranslationMissingPlaceholder")}
                           />
                           <textarea
                             className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[60px] resize-none bg-white"
-                            value={imp.desc_it}
-                            onChange={(e) => updateList("impegniB", imp.id, { desc_it: e.target.value })}
-                            placeholder={t("paramDescPlaceholderIt")}
+                            value={imp[`desc_${langKey}`] || ""}
+                            onChange={(e) => updateList("impegniB", imp.id, { [`desc_${langKey}`]: e.target.value })}
+                            placeholder={t("declTranslationMissingPlaceholder")}
                           />
                         </div>
                         <button
@@ -455,17 +534,22 @@ export default function AdminPage({ onLogout }) {
                 </div>
 
                 {/* Questionario (ex Dichiarazione C) */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
+                <div className="bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8 gap-3 flex-wrap">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
                       <FileText size={24} /> {t("declCTitleAdmin")}
                     </h4>
-                    <button
-                      onClick={() => addToList("impegniC", NEW_IMPEGNO_C)}
-                      className="text-amber-600 bg-amber-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-amber-100 flex items-center gap-2"
-                    >
-                      <PlusCircle size={14} /> {t("addDeclaration")}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 ${activeLangField.color}`}>
+                        {t("editingLanguage")}: {activeLangField.code}
+                      </span>
+                      <button
+                        onClick={() => addToList("impegniC", NEW_IMPEGNO_C)}
+                        className="text-amber-600 bg-amber-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-amber-100 flex items-center gap-2"
+                      >
+                        <PlusCircle size={14} /> {t("addDeclaration")}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-5">
                     {globalConfig.impegniC.map((imp, idx) => (
@@ -487,34 +571,21 @@ export default function AdminPage({ onLogout }) {
 
                         <div className="mb-6">
                           <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">{t("declCSectionPlaceholder")}</label>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {LANG_FIELDS.map(({ code, sectionField, color }) => (
-                              <div key={sectionField} className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-100 transition-all pl-1">
-                                <span className={`text-[9px] font-black w-7 text-center shrink-0 ${color}`}>{code}</span>
-                                <input
-                                  className="w-full py-2.5 pr-3 text-[11px] font-black uppercase text-amber-700 outline-none bg-transparent"
-                                  value={imp[sectionField] || ""}
-                                  onChange={(e) => updateList("impegniC", imp.id, { [sectionField]: e.target.value })}
-                                />
-                              </div>
-                            ))}
-                          </div>
+                          <input
+                            className="w-full p-2 border border-slate-200 rounded-xl text-[11px] font-black uppercase text-amber-700 outline-none focus:border-amber-500 bg-white"
+                            value={imp[activeLangField.sectionField] || ""}
+                            onChange={(e) => updateList("impegniC", imp.id, { [activeLangField.sectionField]: e.target.value })}
+                          />
                         </div>
 
                         <div className="mb-6">
                           <label className="text-[10px] font-black uppercase text-slate-400 mb-2 block">{t("declTextPlaceholderIt")}</label>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {LANG_FIELDS.map(({ code, field, color }) => (
-                              <div key={field} className="flex items-start gap-2 bg-white rounded-xl border border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all pl-1">
-                                <span className={`text-[9px] font-black w-7 text-center shrink-0 pt-3 ${color}`}>{code}</span>
-                                <textarea
-                                  className="w-full py-2.5 pr-3 text-xs font-bold text-slate-700 outline-none bg-transparent min-h-[72px] resize-none leading-relaxed"
-                                  value={imp[field] || ""}
-                                  onChange={(e) => updateList("impegniC", imp.id, { [field]: e.target.value })}
-                                />
-                              </div>
-                            ))}
-                          </div>
+                          <textarea
+                            className="w-full p-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-blue-500 min-h-[72px] resize-none bg-white"
+                            value={imp[langKey] || ""}
+                            onChange={(e) => updateList("impegniC", imp.id, { [langKey]: e.target.value })}
+                            placeholder={t("declTranslationMissingPlaceholder")}
+                          />
                         </div>
 
                         <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 cursor-pointer w-fit pt-4 border-t border-slate-200">
@@ -535,26 +606,31 @@ export default function AdminPage({ onLogout }) {
                 </div>
 
                 {/* Griglia Allergeni */}
-                <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8">
+                <div className="bg-white p-5 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-8 gap-3 flex-wrap">
                     <h4 className="text-2xl font-black uppercase text-slate-800 flex items-center gap-3">
                       <FileText size={24} /> {t("allergenGridTitleAdmin")}
                     </h4>
-                    <button
-                      onClick={() => addToList("allergeni", NEW_ALLERGEN)}
-                      className="text-purple-600 bg-purple-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-purple-100 flex items-center gap-2"
-                    >
-                      <PlusCircle size={14} /> {t("addAllergen")}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-slate-100 ${activeLangField.color}`}>
+                        {t("editingLanguage")}: {activeLangField.code}
+                      </span>
+                      <button
+                        onClick={() => addToList("allergeni", NEW_ALLERGEN)}
+                        className="text-purple-600 bg-purple-50 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-purple-100 flex items-center gap-2"
+                      >
+                        <PlusCircle size={14} /> {t("addAllergen")}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     {globalConfig.allergeni.map((all) => (
                       <div key={all.id} className="flex items-center gap-4 group bg-slate-50 p-4 rounded-2xl border border-slate-100 relative">
                         <input
-                          className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-500 bg-white"
-                          value={all.it}
-                          onChange={(e) => updateList("allergeni", all.id, { it: e.target.value })}
-                          placeholder={t("allergenNamePlaceholderIt")}
+                          className="w-full p-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-purple-500 bg-white"
+                          value={all[langKey] || ""}
+                          onChange={(e) => updateList("allergeni", all.id, { [langKey]: e.target.value })}
+                          placeholder={t("declTranslationMissingPlaceholder")}
                         />
                         <button
                           onClick={() => removeFromList("allergeni", all.id, t("confirmDeleteAllergen"))}

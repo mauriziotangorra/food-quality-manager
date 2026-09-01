@@ -106,7 +106,7 @@ export default function QualificationPage({ onLogout }) {
           impegniC: settingsData?.settings?.templates?.impegniC || [],
         });
       })
-      .catch((e) => showAlert(e.message || "Errore nel caricamento dei dati"))
+      .catch((e) => showAlert(e.message || t("genericLoadError")))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supplier?.id]);
@@ -118,7 +118,7 @@ export default function QualificationPage({ onLogout }) {
       await api.saveQualifications(supplier.id, { qualData: newData || qualData, productSpecs: undefined, lastUpdate: timestamp.toISOString() });
       setLastSyncTime(timestamp.toLocaleString(lang));
     } catch (e) {
-      showAlert(e.message || "Errore durante il salvataggio");
+      showAlert(e.message || t("genericSaveError"));
     }
   };
 
@@ -144,7 +144,7 @@ export default function QualificationPage({ onLogout }) {
       setLastSyncTime(timestamp.toLocaleString(lang));
       return true;
     } catch (e) {
-      showAlert(e.message || "Errore durante il salvataggio");
+      showAlert(e.message || t("genericSaveError"));
       return false;
     }
   };
@@ -172,12 +172,12 @@ export default function QualificationPage({ onLogout }) {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20 text-slate-900">
-      <nav className="bg-white border-b sticky top-0 z-30 px-10 py-6 flex justify-between items-center shadow-lg">
-        <div className="flex items-center gap-6">
-          <CheckCircle2 size={32} className="text-emerald-600" />
-          <h2 className="text-2xl font-black uppercase tracking-tighter">{supplier.name}</h2>
+      <nav className="bg-white border-b sticky top-0 z-30 px-4 md:px-10 py-4 md:py-6 flex flex-wrap justify-between items-center gap-4 shadow-lg">
+        <div className="flex items-center gap-4 md:gap-6 min-w-0">
+          <CheckCircle2 size={32} className="text-emerald-600 shrink-0" />
+          <h2 className="text-lg md:text-2xl font-black uppercase tracking-tighter truncate">{supplier.name}</h2>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6 flex-wrap">
           <div className="flex flex-col items-end mr-2">
             <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest">
               <span className="relative flex h-2.5 w-2.5">
@@ -197,13 +197,13 @@ export default function QualificationPage({ onLogout }) {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto p-12">
-        <div className="flex bg-white/50 backdrop-blur p-2 rounded-[2.5rem] border border-slate-200 mb-12 overflow-x-auto shadow-inner">
+      <div className="max-w-7xl mx-auto p-4 md:p-12">
+        <div className="flex bg-white/50 backdrop-blur p-2 rounded-[2.5rem] border border-slate-200 mb-6 md:mb-12 overflow-x-auto shadow-inner">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-5 px-6 rounded-[2rem] text-[10px] font-black uppercase whitespace-nowrap transition-all ${
+              className={`flex-1 shrink-0 py-3 md:py-5 px-4 md:px-6 rounded-[2rem] text-[10px] font-black uppercase whitespace-nowrap transition-all ${
                 activeTab === tab.id ? "bg-slate-900 text-white shadow-2xl scale-[1.05]" : "text-slate-400 hover:text-slate-800"
               }`}
             >
@@ -212,7 +212,7 @@ export default function QualificationPage({ onLogout }) {
           ))}
         </div>
 
-        <div className="bg-white rounded-[4rem] shadow-2xl border border-slate-100 p-16 min-h-[600px]">
+        <div className="bg-white rounded-[2rem] md:rounded-[4rem] shadow-2xl border border-slate-100 p-6 md:p-16 min-h-[600px]">
           {loading ? (
             <div className="text-center text-slate-400 font-bold py-20">{t("loading")}</div>
           ) : (

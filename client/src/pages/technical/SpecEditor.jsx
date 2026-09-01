@@ -189,10 +189,10 @@ function SectionA({ t, spec, disabled, onUpdateField, onBrandLogoUpload }) {
         {spec.a?.brandLogo ? (
           <img src={spec.a.brandLogo} alt="Brand" className="h-12 object-contain" />
         ) : (
-          <span className="text-[10px] font-black uppercase text-slate-400">Logo Brand Prodotto</span>
+          <span className="text-[10px] font-black uppercase text-slate-400">{t("brandLogoPlaceholder")}</span>
         )}
         <div className="relative overflow-hidden inline-block ml-auto">
-          <button disabled={disabled} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase disabled:opacity-50 pointer-events-none">Carica Logo</button>
+          <button disabled={disabled} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase disabled:opacity-50 pointer-events-none">{t("uploadLogoBtn")}</button>
           {!disabled && <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={onBrandLogoUpload} />}
         </div>
       </div>
