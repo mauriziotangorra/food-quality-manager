@@ -18,16 +18,21 @@ function isAiConfigured() {
   return Boolean(process.env.GEMINI_API_KEY);
 }
 
-// Traduce un gruppo di campi (es. {text: '...', section: '...'} oppure
-// {title: '...', desc: '...'}) da una lingua sorgente a UNA lingua di
-// destinazione, in una sola chiamata AI. Ignora i campi vuoti (non li manda
-// al modello, non li include nel risultato). Non scrive nulla: il chiamante
-// decide se/come applicare il risultato.
-async function translateFieldGroup(fields, sourceLang, targetLang) {
-  const nonEmpty = Object.fromEntries(
-    Object.entries(fields || {}).filter(([, v]) => (v || '').toString().trim())
-  );
-  if (!Object.keys(nonEmpty).length) return {};
+// Traduce in UNA sola chiamata AI un intero BATCH di elementi (non un
+// elemento alla volta): il piano gratuito di Gemini ha una quota giornaliera
+// di richieste molto bassa (es. 20/giorno), quindi tradurre 40+ dichiarazioni
+// con una chiamata a testa la esaurisce quasi subito. `items` e'
+// [{ id, fields: {campo: testo, ...} }] nella lingua sorgente; ritorna
+// { id: {campo: testo tradotto, ...}, ... } — solo per gli id/campi che
+// avevano davvero del testo da tradurre.
+async function translateBatch(items, sourceLang, targetLang) {
+  const usable = items
+    .map((it) => ({
+      id: it.id,
+      fields: Object.fromEntries(Object.entries(it.fields || {}).filter(([, v]) => (v || '').toString().trim())),
+    }))
+    .filter((it) => Object.keys(it.fields).length);
+  if (!usable.length) return {};
 
   const ai = getClient();
   if (!ai) {
@@ -38,15 +43,22 @@ async function translateFieldGroup(fields, sourceLang, targetLang) {
 
   const schema = {
     type: Type.OBJECT,
-    properties: Object.fromEntries(Object.keys(nonEmpty).map((k) => [k, { type: Type.STRING }])),
+    properties: Object.fromEntries(
+      usable.map((it) => [
+        it.id,
+        { type: Type.OBJECT, properties: Object.fromEntries(Object.keys(it.fields).map((k) => [k, { type: Type.STRING }])) },
+      ])
+    ),
   };
 
-  const prompt = `Translate the following JSON field values from ${LANG_NAMES[sourceLang] || sourceLang} to ${LANG_NAMES[targetLang] || targetLang}.
+  const payload = Object.fromEntries(usable.map((it) => [it.id, it.fields]));
 
-This text comes from a food-industry supplier-qualification / compliance form (declarations, quality parameters, questionnaire questions, allergen names). Keep regulation codes, standard names and acronyms unchanged (e.g. "Reg. CE 178/2002", "HACCP", "ACCREDIA", "DPR 327/80", "BRCGS", "GMP", "OGM/GMO" per the target language convention) and translate only the surrounding language. Preserve line breaks and punctuation. Return a JSON object with the SAME keys as the input, containing only the translated values — never add, remove, or rename keys.
+  const prompt = `Translate the following JSON from ${LANG_NAMES[sourceLang] || sourceLang} to ${LANG_NAMES[targetLang] || targetLang}.
+
+This is a batch of ${usable.length} separate items from a food-industry supplier-qualification / compliance form (declarations, quality parameters, questionnaire questions, allergen names) — each top-level key is an independent item id, translate each one's fields independently. Keep regulation codes, standard names and acronyms unchanged (e.g. "Reg. CE 178/2002", "HACCP", "ACCREDIA", "DPR 327/80", "BRCGS", "GMP") and translate only the surrounding language. Preserve line breaks and punctuation. Return a JSON object with the SAME top-level item-id keys and the SAME nested field keys as the input, containing only the translated values — never add, remove, or rename any key.
 
 INPUT:
-${JSON.stringify(nonEmpty, null, 2)}`;
+${JSON.stringify(payload, null, 2)}`;
 
   let response;
   try {
@@ -79,28 +91,20 @@ ${JSON.stringify(nonEmpty, null, 2)}`;
 
 // Dato langGroups = { it: {...campi...}, en: {...}, fr: {...}, es: {...} },
 // determina la lingua sorgente (preferisce 'it' se ha contenuto, altrimenti
-// la prima lingua non vuota) e traduce SOLO i gruppi-lingua completamente
-// vuoti — non tocca mai una lingua che ha gia' un valore, anche parziale
-// (mai sovrascrivere una traduzione/testo che qualcuno ha gia' scritto).
-async function fillMissingTranslations(langGroups) {
+// la prima lingua non vuota) e quali lingue di destinazione sono
+// completamente vuote (mai una lingua che ha gia' qualcosa, anche parziale).
+// Non chiama l'AI: e' solo il calcolo, cosi' il chiamante puo' raggruppare
+// tanti elementi per (sourceLang, targetLang) e tradurli in un solo batch
+// invece di un elemento alla volta.
+function planTranslation(langGroups) {
   const isGroupEmpty = (g) => !g || Object.values(g).every((v) => !(v || '').toString().trim());
-
   let sourceLang = null;
   for (const l of ALL_LANGS) {
     if (!isGroupEmpty(langGroups[l])) { sourceLang = l; break; }
   }
-  if (!sourceLang) return langGroups; // niente da cui tradurre, nessuna lingua ha contenuto
-
+  if (!sourceLang) return { sourceLang: null, missing: [] };
   const missing = ALL_LANGS.filter((l) => l !== sourceLang && isGroupEmpty(langGroups[l]));
-  if (!missing.length) return langGroups;
-
-  const result = { ...langGroups };
-  for (const target of missing) {
-    // eslint-disable-next-line no-await-in-loop
-    const translated = await translateFieldGroup(langGroups[sourceLang], sourceLang, target);
-    result[target] = { ...langGroups[target], ...translated };
-  }
-  return result;
+  return { sourceLang, missing };
 }
 
-module.exports = { translateFieldGroup, fillMissingTranslations, isAiConfigured };
+module.exports = { translateBatch, planTranslation, isAiConfigured, ALL_LANGS };

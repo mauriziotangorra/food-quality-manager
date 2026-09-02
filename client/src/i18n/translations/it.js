@@ -284,6 +284,7 @@ export default {
   translateMissingError: "Errore durante la traduzione automatica.",
   translationSkippedNotConfigured: "Attenzione: la traduzione automatica NON è attiva su questo server (GEMINI_API_KEY non configurata) — le lingue lasciate vuote non sono state tradotte, sono rimaste vuote così come inserite.",
   translationSkippedFailed: "Attenzione: la traduzione automatica non è riuscita per {count} elemento/i — controlla e riprova, o inserisci quella lingua manualmente.",
+  translateMissingPartialFailure: "Attenzione: {count} elemento/i non tradotti (es. quota AI giornaliera esaurita) — riprova più tardi con lo stesso pulsante.",
   aiExtractionFailed: "Lettura automatica del documento non riuscita: {error}",
   aiSuggestionsAppliedAlert: "Suggerimenti applicati alla scheda. Ricontrolla i campi evidenziati e salva quando pronto.",
   uploadFileBtn: "Carica File",
