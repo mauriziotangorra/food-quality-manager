@@ -1,4 +1,5 @@
 const { GoogleGenAI, Type } = require('@google/genai');
+const { isQuotaError, QUOTA_MESSAGE_IT, extractCleanGeminiMessage } = require('../utils/aiErrorMessage');
 
 // Stesso modello/client usati per l'estrazione AI dei documenti
 // (aiExtractionService.js): un client separato qui perche' il caso d'uso
@@ -22,17 +23,14 @@ function isCloudTranslateConfigured() {
   return Boolean(process.env.GOOGLE_TRANSLATE_API_KEY);
 }
 
-// Usato SOLO per decidere se vale la pena tentare il fallback su Google
-// Cloud Translation: Gemini incapsula l'errore originale dentro e.message
-// come stringa (vedi catch in translateBatchViaGemini), quindi qui si
-// riconosce l'esaurimento quota dal testo — non elegantissimo, ma è tutto
-// quello che il SDK espone. Altri errori (prompt non valido, rete, ecc.)
-// NON attivano il fallback: propagano normalmente, così un bug reale non
-// viene mascherato da un secondo servizio che "sembra" funzionare.
-function isQuotaError(e) {
-  const msg = e?.message || '';
-  return msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429') || /quota/i.test(msg);
-}
+// isQuotaError (da ../utils/aiErrorMessage, condivisa con
+// aiExtractionService.js) decide se vale la pena tentare il fallback su
+// Google Cloud Translation: Gemini incapsula l'errore originale dentro
+// e.message come stringa, quindi si riconosce l'esaurimento quota dal
+// testo — non elegantissimo, ma è tutto quello che il SDK espone. Altri
+// errori (prompt non valido, rete, ecc.) NON attivano il fallback:
+// propagano normalmente, così un bug reale non viene mascherato da un
+// secondo servizio che "sembra" funzionare.
 
 function isAiConfigured() {
   return isGeminiConfigured() || isCloudTranslateConfigured();
@@ -88,7 +86,12 @@ ${JSON.stringify(payload, null, 2)}`;
       config: { responseMimeType: 'application/json', responseSchema: schema },
     });
   } catch (e) {
-    const err = new Error(`Errore durante la chiamata al modello di traduzione AI: ${e.message}`);
+    if (isQuotaError(e.message)) {
+      const err = new Error(QUOTA_MESSAGE_IT);
+      err.code = 'AI_QUOTA_EXCEEDED';
+      throw err;
+    }
+    const err = new Error(`Errore durante la chiamata al modello di traduzione AI: ${extractCleanGeminiMessage(e.message) || e.message}`);
     err.code = 'AI_REQUEST_FAILED';
     throw err;
   }
@@ -182,7 +185,7 @@ async function translateBatch(items, sourceLang, targetLang) {
     try {
       return await translateBatchViaGemini(items, sourceLang, targetLang);
     } catch (e) {
-      if (isQuotaError(e) && isCloudTranslateConfigured()) {
+      if (e.code === 'AI_QUOTA_EXCEEDED' && isCloudTranslateConfigured()) {
         console.warn(`⚠️  Quota Gemini esaurita, fallback su Google Cloud Translation (${sourceLang}->${targetLang}, ${items.length} elementi).`);
         return translateBatchViaCloudTranslate(items, sourceLang, targetLang);
       }
