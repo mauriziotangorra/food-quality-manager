@@ -131,6 +131,12 @@ export default {
   traces: "Traces Risk (Cross-Cont.)",
   yes: "Yes",
   no: "No",
+  allergenPresenceNo: "No",
+  allergenPresenceIngredient: "Yes (Ingredient)",
+  allergenPresenceDerivative: "Yes (Derivative/Additive)",
+  allergenTracesNo: "No",
+  allergenTracesSameLine: "Possible (Same line)",
+  allergenTracesSamePlant: "Possible (Same plant)",
   notes: "Notes",
 
   sc_g: "g) GMO DECLARATION",

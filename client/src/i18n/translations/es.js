@@ -131,6 +131,12 @@ export default {
   traces: "Trazas",
   yes: "Sí",
   no: "No",
+  allergenPresenceNo: "No",
+  allergenPresenceIngredient: "Sí (Ingrediente)",
+  allergenPresenceDerivative: "Sí (Derivado/Aditivo)",
+  allergenTracesNo: "No",
+  allergenTracesSameLine: "Posible (Misma línea)",
+  allergenTracesSamePlant: "Posible (Misma planta)",
   notes: "Notas",
 
   sc_g: "g) DECLARACIÓN OGM",

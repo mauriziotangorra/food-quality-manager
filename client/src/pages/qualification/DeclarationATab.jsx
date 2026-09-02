@@ -166,9 +166,9 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
                       value={row.presenza || "No"}
                       onChange={(e) => updateAllergen(all.id, { presenza: e.target.value })}
                     >
-                      <option value="No">No</option>
-                      <option value="Sì (Ingrediente)">Sì (Ingrediente)</option>
-                      <option value="Sì (Derivato/Additivo)">Sì (Derivato/Additivo)</option>
+                      <option value="No">{t("allergenPresenceNo")}</option>
+                      <option value="Sì (Ingrediente)">{t("allergenPresenceIngredient")}</option>
+                      <option value="Sì (Derivato/Additivo)">{t("allergenPresenceDerivative")}</option>
                     </select>
                   </div>
                   <div className="col-span-3">
@@ -177,9 +177,9 @@ export default function DeclarationATab({ t, lang, qualData, setQualData, global
                       value={row.tracce || "No"}
                       onChange={(e) => updateAllergen(all.id, { tracce: e.target.value })}
                     >
-                      <option value="No">No</option>
-                      <option value="Possibile (Stessa linea)">Possibile (Stessa linea)</option>
-                      <option value="Possibile (Stesso stabilimento)">Possibile (Stesso stab.)</option>
+                      <option value="No">{t("allergenTracesNo")}</option>
+                      <option value="Possibile (Stessa linea)">{t("allergenTracesSameLine")}</option>
+                      <option value="Possibile (Stesso stabilimento)">{t("allergenTracesSamePlant")}</option>
                     </select>
                   </div>
                   <div className="col-span-3">
