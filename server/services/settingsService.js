@@ -83,10 +83,17 @@ const LANG_ADAPTERS = {
 // Riempie con l'AI le sole lingue completamente vuote di ogni item della
 // lista (mai una lingua che ha gia' qualcosa, anche parziale). Se l'AI non è
 // configurata (niente GEMINI_API_KEY) o una singola traduzione fallisce,
-// l'item viene lasciato così com'era: la traduzione è un miglioramento
-// automatico, mai un requisito per poter salvare.
-async function autoTranslateList(items, adapterKey) {
-  if (!translationService.isAiConfigured() || !Array.isArray(items) || !items.length) return items;
+// l'item viene lasciato così com'era — il salvataggio non deve MAI fallire
+// per colpa della traduzione — ma a differenza di prima l'esito (quanti
+// elementi tradotti, quanti saltati e perché) viene tracciato in `report` e
+// restituito al chiamante, invece di sparire in un solo console.warn lato
+// server: chi salva dall'admin deve poterlo vedere.
+async function autoTranslateList(items, adapterKey, report) {
+  if (!Array.isArray(items) || !items.length) return items;
+  if (!translationService.isAiConfigured()) {
+    report.notConfigured = true;
+    return items;
+  }
   const adapter = LANG_ADAPTERS[adapterKey];
   const out = [];
   for (const item of items) {
@@ -96,6 +103,8 @@ async function autoTranslateList(items, adapterKey) {
       out.push(adapter.fromGroups(item, groups));
     } catch (e) {
       console.warn(`⚠️  Traduzione automatica saltata per un elemento (${adapterKey}, id=${item.id}): ${e.message}`);
+      report.failed += 1;
+      report.lastError = e.message;
       out.push(item);
     }
   }
@@ -111,18 +120,21 @@ async function saveGlobalSettings(patch) {
     await pool.query('UPDATE app_settings SET logo_url = ? WHERE id = 1', [patch.logo]);
   }
 
+  let translationReport = null;
   if (patch.templates) {
     const t = patch.templates;
 
     // Traduzione automatica PRIMA della transazione DB: sono chiamate AI
     // esterne, potenzialmente lente — non deve tenere aperta una transazione
     // mentre aspetta Gemini.
+    const report = { notConfigured: false, failed: 0, lastError: null };
     const [translatedA, translatedB, translatedC, translatedAllergeni] = await Promise.all([
-      Array.isArray(t.impegniA) ? autoTranslateList(t.impegniA, 'simple') : t.impegniA,
-      Array.isArray(t.impegniB) ? autoTranslateList(t.impegniB, 'impegniB') : t.impegniB,
-      Array.isArray(t.impegniC) ? autoTranslateList(t.impegniC, 'impegniC') : t.impegniC,
-      Array.isArray(t.allergeni) ? autoTranslateList(t.allergeni, 'simple') : t.allergeni,
+      Array.isArray(t.impegniA) ? autoTranslateList(t.impegniA, 'simple', report) : t.impegniA,
+      Array.isArray(t.impegniB) ? autoTranslateList(t.impegniB, 'impegniB', report) : t.impegniB,
+      Array.isArray(t.impegniC) ? autoTranslateList(t.impegniC, 'impegniC', report) : t.impegniC,
+      Array.isArray(t.allergeni) ? autoTranslateList(t.allergeni, 'simple', report) : t.allergeni,
     ]);
+    if (report.notConfigured || report.failed) translationReport = report;
 
     await pool.withTransaction(async (conn) => {
       if (Array.isArray(translatedA)) {
@@ -150,7 +162,13 @@ async function saveGlobalSettings(patch) {
     });
   }
 
-  return getGlobalSettings();
+  const settings = await getGlobalSettings();
+  // Non fa parte della "forma" storica di /api/settings (vedi commento in
+  // getGlobalSettings): aggiunto solo qui, sulla risposta del salvataggio,
+  // cosi' l'admin vede SUBITO se una lingua non e' stata tradotta e perche',
+  // invece che scoprirlo solo cambiando lingua piu' tardi.
+  if (translationReport) settings.translationWarning = translationReport;
+  return settings;
 }
 
 // "Seeder" per i dati GIA' presenti in DB (es. su un ambiente dove le

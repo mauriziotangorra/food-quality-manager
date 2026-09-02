@@ -214,8 +214,15 @@ export default function AdminPage({ onLogout }) {
   const saveTemplates = async () => {
     setSavingTemplates(true);
     try {
-      await api.saveSettings({ templates: globalConfig });
-      showAlert(t("adminDeclarationsSaved"));
+      const { settings } = await api.saveSettings({ templates: globalConfig });
+      const warn = settings?.translationWarning;
+      if (warn?.notConfigured) {
+        showAlert(`${t("adminDeclarationsSaved")}\n\n${t("translationSkippedNotConfigured")}`);
+      } else if (warn?.failed) {
+        showAlert(`${t("adminDeclarationsSaved")}\n\n${t("translationSkippedFailed").replace("{count}", warn.failed)}`);
+      } else {
+        showAlert(t("adminDeclarationsSaved"));
+      }
     } catch (e) {
       showAlert(e.message || t("adminSaveDeclarationsError"));
     } finally {
