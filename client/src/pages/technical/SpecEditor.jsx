@@ -256,6 +256,33 @@ function SectionB({ t, spec, disabled, onUpdateTable, onAddTableRow }) {
   );
 }
 
+// Le righe "Elemento" della Sezione C sono testo libero digitato dal
+// fornitore (non un template admin) — non hanno quindi una vera colonna
+// per lingua da tradurre. Le 9 righe standard, però, vengono scritte da
+// buildNewSpec() in TechnicalPage.jsx usando t(), quindi finiscono
+// "congelate" nella lingua attiva al momento della creazione della scheda:
+// cambiare lingua dopo non le aggiorna più, perché a quel punto sono solo
+// testo salvato. Questa mappa fa da lookup inverso (testo salvato, in una
+// qualunque delle 4 lingue, -> chiave di traduzione) SOLO per mostrare un
+// suggerimento sotto il campo nella lingua corrente — il valore
+// effettivamente salvato/modificabile non viene mai toccato.
+const NUTRITION_LABEL_KEYS = ["energyKj", "energyKcal", "fat", "satFat", "carbs", "sugar", "fiber", "protein", "salt"];
+const NUTRITION_LABEL_TEXT_BY_LANG = {
+  it: { energyKj: "Energia (kJ)", energyKcal: "Energia (kcal)", fat: "Grassi (g)", satFat: "di cui acidi grassi saturi (g)", carbs: "Carboidrati (g)", sugar: "di cui zuccheri (g)", fiber: "Fibre (g)", protein: "Proteine (g)", salt: "Sale (g)" },
+  en: { energyKj: "Energy (kJ)", energyKcal: "Energy (kcal)", fat: "Fat (g)", satFat: "of which saturates (g)", carbs: "Carbohydrate (g)", sugar: "of which sugars (g)", fiber: "Fibre (g)", protein: "Protein (g)", salt: "Salt (g)" },
+  fr: { energyKj: "Énergie (kJ)", energyKcal: "Énergie (kcal)", fat: "Matières grasses (g)", satFat: "dont acides gras saturés (g)", carbs: "Glucides (g)", sugar: "dont sucres (g)", fiber: "Fibres (g)", protein: "Protéines (g)", salt: "Sel (g)" },
+  es: { energyKj: "Energía (kJ)", energyKcal: "Energía (kcal)", fat: "Grasas (g)", satFat: "de las cuales saturadas (g)", carbs: "Hidratos de carbono (g)", sugar: "de los cuales azúcares (g)", fiber: "Fibra (g)", protein: "Proteínas (g)", salt: "Sal (g)" },
+};
+const NUTRITION_LABEL_LOOKUP = (() => {
+  const map = {};
+  for (const lang of Object.keys(NUTRITION_LABEL_TEXT_BY_LANG)) {
+    for (const key of NUTRITION_LABEL_KEYS) {
+      map[NUTRITION_LABEL_TEXT_BY_LANG[lang][key]] = key;
+    }
+  }
+  return map;
+})();
+
 function SectionC({ t, spec, disabled, onUpdateTable, onAddTableRow }) {
   return (
     <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-emerald-100 shadow-inner space-y-4">
@@ -264,12 +291,20 @@ function SectionC({ t, spec, disabled, onUpdateTable, onAddTableRow }) {
         {!disabled && <button onClick={() => onAddTableRow("c")} className="p-1 bg-emerald-600 text-white rounded-full">+</button>}
       </div>
       <div className="grid grid-cols-2 gap-4 text-[8px] font-black text-slate-400 px-1 uppercase"><span>{t("element")}</span><span>{t("value")}</span></div>
-      {spec.c?.map((r) => (
-        <div key={r.id} className="grid grid-cols-2 gap-2">
-          <input disabled={disabled} className="p-2 bg-white rounded-lg text-[10px] font-bold shadow-sm border-none disabled:opacity-70 disabled:bg-slate-100" value={r.p || ""} onChange={(e) => onUpdateTable("c", r.id, "p", e.target.value)} />
-          <input disabled={disabled} className="p-2 bg-white rounded-lg text-[10px] font-bold shadow-sm border-none disabled:opacity-70 disabled:bg-slate-100" value={r.v || ""} onChange={(e) => onUpdateTable("c", r.id, "v", e.target.value)} />
-        </div>
-      ))}
+      {spec.c?.map((r) => {
+        const matchedKey = NUTRITION_LABEL_LOOKUP[(r.p || "").trim()];
+        const translatedHint = matchedKey ? t(matchedKey) : null;
+        const showHint = translatedHint && translatedHint !== r.p;
+        return (
+          <div key={r.id} className="grid grid-cols-2 gap-2">
+            <div>
+              <input disabled={disabled} className="w-full p-2 bg-white rounded-lg text-[10px] font-bold shadow-sm border-none disabled:opacity-70 disabled:bg-slate-100" value={r.p || ""} onChange={(e) => onUpdateTable("c", r.id, "p", e.target.value)} />
+              {showHint && <p className="text-[8px] font-bold text-blue-500 px-1 pt-0.5">≈ {translatedHint}</p>}
+            </div>
+            <input disabled={disabled} className="p-2 bg-white rounded-lg text-[10px] font-bold shadow-sm border-none disabled:opacity-70 disabled:bg-slate-100 h-fit" value={r.v || ""} onChange={(e) => onUpdateTable("c", r.id, "v", e.target.value)} />
+          </div>
+        );
+      })}
     </div>
   );
 }
