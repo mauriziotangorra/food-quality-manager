@@ -39,6 +39,32 @@ const LANG_FIELDS = [
   { code: "ES", field: "es", sectionField: "section_es", color: "text-rose-500" },
 ];
 
+// server/routes/suppliers.js manda solo testo italiano nel campo "error" —
+// non traducibile lato client con un semplice fallback, perche' alcune di
+// queste validazioni (es. password duplicata) esistono solo sul server (va
+// controllato l'intero DB). Il server manda anche un "code" language-neutral
+// accanto al testo (vedi api.js: body.code -> error.code): questa mappa
+// traduce quel code in una chiave i18n, cosi' l'alert e' sempre nella lingua
+// corrente invece del testo italiano grezzo del server.
+const SUPPLIER_ERROR_CODE_KEYS = {
+  SUPPLIER_NAME_REQUIRED: "adminSupplierNameRequired",
+  SUPPLIER_PASSWORDS_REQUIRED: "adminQualPassRequired",
+  QUAL_PASSWORD_IN_USE: "qualPasswordInUse",
+  TECH_PASSWORD_IN_USE: "techPasswordInUse",
+  SUPPLIER_NOT_FOUND: "supplierNotFoundError",
+  INVALID_QUALIFICATION_STATUS: "invalidQualificationStatus",
+  NO_FIELDS_TO_UPDATE: "noFieldsToUpdate",
+  SUPPLIER_CREATE_FAILED: "adminSaveSupplierError",
+  SUPPLIER_UPDATE_FAILED: "adminSaveSupplierError",
+  QUAL_STATUS_SAVE_FAILED: "qualStatusSaveError",
+  SUPPLIER_DELETE_FAILED: "adminDeleteSupplierError",
+  SUPPLIERS_FETCH_FAILED: "adminLoadSuppliersError",
+};
+
+function supplierErrorMessage(t, e, fallbackKey) {
+  return t(SUPPLIER_ERROR_CODE_KEYS[e?.code] || fallbackKey);
+}
+
 export default function AdminPage({ onLogout }) {
   const { t, lang } = useLanguage();
   // L'editor mostra/edita UN SOLO campo alla volta, quello della lingua
@@ -156,7 +182,7 @@ export default function AdminPage({ onLogout }) {
       loadSuppliers();
       showAlert(t("adminSupplierSaved"));
     } catch (e) {
-      showAlert(e.message || t("adminSaveSupplierError"));
+      showAlert(supplierErrorMessage(t, e, "adminSaveSupplierError"));
     }
   };
 
@@ -168,7 +194,7 @@ export default function AdminPage({ onLogout }) {
     try {
       await api.updateSupplierQualification(id, { qualificationStatus: value });
     } catch (e) {
-      showAlert(e.message || t("qualStatusSaveError"));
+      showAlert(supplierErrorMessage(t, e, "qualStatusSaveError"));
     }
   };
 
@@ -180,7 +206,7 @@ export default function AdminPage({ onLogout }) {
     try {
       await api.updateSupplierQualification(id, { qualificationNotes: value });
     } catch (e) {
-      showAlert(e.message || t("qualNotesSaveError"));
+      showAlert(supplierErrorMessage(t, e, "qualNotesSaveError"));
     }
   };
 
@@ -191,7 +217,7 @@ export default function AdminPage({ onLogout }) {
         loadSuppliers();
         showAlert(t("adminSupplierDeleted"));
       } catch (e) {
-        showAlert(e.message || t("adminDeleteSupplierError"));
+        showAlert(supplierErrorMessage(t, e, "adminDeleteSupplierError"));
       }
     });
   };
