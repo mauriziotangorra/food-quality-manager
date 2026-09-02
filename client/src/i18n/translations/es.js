@@ -278,6 +278,8 @@ export default {
   translationSkippedFailed: "Atención: la traducción automática ha fallado para {count} elemento(s) — revisa e inténtalo de nuevo, o introduce ese idioma manualmente.",
   translateMissingPartialFailure: "Atención: {count} elemento(s) no traducidos (p. ej. cuota diaria de IA agotada) — inténtalo de nuevo más tarde con el mismo botón.",
   aiExtractionFailed: "La lectura automática del documento ha fallado: {error}",
+  aiQuotaExceeded: "Cuota diaria de lectura de IA agotada. Inténtalo de nuevo más tarde.",
+  fileUploadedAnyway: "El archivo se ha cargado correctamente de todos modos — puedes completar los campos manualmente, no hace falta volver a cargarlo.",
   aiSuggestionsAppliedAlert: "Sugerencias aplicadas a la ficha. Revisa los campos resaltados y guarda cuando estés listo.",
   uploadFileBtn: "Cargar Archivo",
   selectPlaceholder: "Seleccionar...",

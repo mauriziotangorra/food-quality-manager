@@ -278,6 +278,8 @@ export default {
   translationSkippedFailed: "Note: automatic translation failed for {count} item(s) — check and try again, or enter that language manually.",
   translateMissingPartialFailure: "Note: {count} item(s) not translated (e.g. daily AI quota exhausted) — try again later with the same button.",
   aiExtractionFailed: "Automatic document reading failed: {error}",
+  aiQuotaExceeded: "Daily AI reading quota exhausted. Please try again later.",
+  fileUploadedAnyway: "The file was still uploaded successfully — you can fill in the fields manually, no need to re-upload it.",
   aiSuggestionsAppliedAlert: "Suggestions applied to the spec. Re-check the highlighted fields and save when ready.",
   uploadFileBtn: "Upload File",
   selectPlaceholder: "Select...",

@@ -286,6 +286,8 @@ export default {
   translationSkippedFailed: "Attenzione: la traduzione automatica non è riuscita per {count} elemento/i — controlla e riprova, o inserisci quella lingua manualmente.",
   translateMissingPartialFailure: "Attenzione: {count} elemento/i non tradotti (es. quota AI giornaliera esaurita) — riprova più tardi con lo stesso pulsante.",
   aiExtractionFailed: "Lettura automatica del documento non riuscita: {error}",
+  aiQuotaExceeded: "Quota giornaliera di lettura AI esaurita. Riprova più tardi.",
+  fileUploadedAnyway: "Il file è stato comunque caricato correttamente — puoi compilare i campi manualmente, non serve ricaricarlo.",
   aiSuggestionsAppliedAlert: "Suggerimenti applicati alla scheda. Ricontrolla i campi evidenziati e salva quando pronto.",
   uploadFileBtn: "Carica File",
   selectPlaceholder: "Seleziona...",

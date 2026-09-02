@@ -278,6 +278,8 @@ export default {
   translationSkippedFailed: "Attention : la traduction automatique a échoué pour {count} élément(s) — vérifiez et réessayez, ou saisissez cette langue manuellement.",
   translateMissingPartialFailure: "Attention : {count} élément(s) non traduits (ex. quota IA quotidien épuisé) — réessayez plus tard avec le même bouton.",
   aiExtractionFailed: "Échec de la lecture automatique du document : {error}",
+  aiQuotaExceeded: "Quota quotidien de lecture IA épuisé. Réessayez plus tard.",
+  fileUploadedAnyway: "Le fichier a tout de même été téléchargé avec succès — vous pouvez remplir les champs manuellement, inutile de le retélécharger.",
   aiSuggestionsAppliedAlert: "Suggestions appliquées à la fiche. Revérifiez les champs surlignés et enregistrez quand vous êtes prêt.",
   uploadFileBtn: "Télécharger un Fichier",
   selectPlaceholder: "Sélectionner...",
