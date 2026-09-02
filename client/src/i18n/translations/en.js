@@ -274,6 +274,8 @@ export default {
   translateMissingHint: "Uses AI to fill in the still-empty languages of already-saved declarations, questionnaire and allergens — never touches a language that already has text.",
   translateMissingDoneAlert: "Translation complete: {count} items updated.",
   translateMissingError: "Error during automatic translation.",
+  translationSkippedNotConfigured: "Note: automatic translation is NOT active on this server (GEMINI_API_KEY not configured) — languages left blank were not translated, they were saved blank exactly as entered.",
+  translationSkippedFailed: "Note: automatic translation failed for {count} item(s) — check and try again, or enter that language manually.",
   aiExtractionFailed: "Automatic document reading failed: {error}",
   aiSuggestionsAppliedAlert: "Suggestions applied to the spec. Re-check the highlighted fields and save when ready.",
   uploadFileBtn: "Upload File",

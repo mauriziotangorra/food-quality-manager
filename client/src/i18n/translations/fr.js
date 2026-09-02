@@ -274,6 +274,8 @@ export default {
   translateMissingHint: "Utilise l'IA pour compléter les langues encore vides des déclarations, du questionnaire et des allergènes déjà enregistrés — ne touche jamais une langue qui a déjà un texte.",
   translateMissingDoneAlert: "Traduction terminée : {count} éléments mis à jour.",
   translateMissingError: "Erreur lors de la traduction automatique.",
+  translationSkippedNotConfigured: "Attention : la traduction automatique n'est PAS active sur ce serveur (GEMINI_API_KEY non configurée) — les langues laissées vides n'ont pas été traduites, elles sont restées vides telles que saisies.",
+  translationSkippedFailed: "Attention : la traduction automatique a échoué pour {count} élément(s) — vérifiez et réessayez, ou saisissez cette langue manuellement.",
   aiExtractionFailed: "Échec de la lecture automatique du document : {error}",
   aiSuggestionsAppliedAlert: "Suggestions appliquées à la fiche. Revérifiez les champs surlignés et enregistrez quand vous êtes prêt.",
   uploadFileBtn: "Télécharger un Fichier",
