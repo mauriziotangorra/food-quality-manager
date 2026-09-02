@@ -86,7 +86,7 @@ router.post('/extract', requireAuth, async (req, res) => {
     res.json({ ok: true, data });
   } catch (err) {
     console.error('POST /api/ai/extract', err);
-    const status = err.code === 'AI_NOT_CONFIGURED' ? 503 : err.code ? 422 : 500;
+    const status = err.code === 'AI_NOT_CONFIGURED' || err.code === 'AI_QUOTA_EXCEEDED' ? 503 : err.code ? 422 : 500;
     res.status(status).json({ error: err.message || "Errore durante l'analisi AI del documento.", code: err.code });
   }
 });

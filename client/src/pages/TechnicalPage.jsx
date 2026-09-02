@@ -324,8 +324,17 @@ export default function TechnicalPage({ onLogout }) {
       if (merged) setAiSuggestion({ specId, docType: importType, data: merged });
     } catch (err) {
       // AI non configurata: nessun disturbo per il fornitore, è una feature opzionale.
-      if (err.code !== "AI_NOT_CONFIGURED") {
-        showAlert(t("aiExtractionFailed").replace("{error}", err.message));
+      if (err.code === "AI_NOT_CONFIGURED") {
+        // no-op
+      } else if (err.code === "AI_QUOTA_EXCEEDED") {
+        // Messaggio pulito invece del JSON grezzo dell'errore Gemini, e
+        // chiarisce che il file È stato caricato — solo la lettura
+        // automatica è fallita — cosi' non si ricarica lo stesso file
+        // pensando che l'upload sia fallito (causa duplicati in "File
+        // allegati alla specifica").
+        showAlert(`${t("aiQuotaExceeded")}\n\n${t("fileUploadedAnyway")}`);
+      } else {
+        showAlert(`${t("aiExtractionFailed").replace("{error}", err.message)}\n\n${t("fileUploadedAnyway")}`);
       }
     } finally {
       setAiLoading(false);

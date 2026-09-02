@@ -199,6 +199,18 @@ async function extractDocumentData({ docType, filePath, mimeType, allergens }) {
       }
     });
   } catch (e) {
+    // Gemini restituisce l'intero payload JSON dell'errore dentro e.message
+    // (code/message/status/details) — utile nei log, ma illeggibile se
+    // mostrato tal quale in un alert. La quota esaurita è il caso più comune
+    // e riconoscibile: viene isolata con un code dedicato e un messaggio
+    // pulito, cosi' chi chiama (routes/aiExtract.js -> client) puo' mostrare
+    // qualcosa di comprensibile invece del JSON grezzo.
+    const rawMsg = e.message || '';
+    if (rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('429') || /quota/i.test(rawMsg)) {
+      const err = new Error('Quota giornaliera del modello AI esaurita. Riprova più tardi o abilita la fatturazione sul progetto Gemini.');
+      err.code = 'AI_QUOTA_EXCEEDED';
+      throw err;
+    }
     const err = new Error(`Errore durante la chiamata al modello AI: ${e.message}`);
     err.code = 'AI_REQUEST_FAILED';
     throw err;

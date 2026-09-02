@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
     res.json({ suppliers: rows.map(mapRow) });
   } catch (err) {
     console.error('GET /api/suppliers', err);
-    res.status(500).json({ error: 'Errore nel recupero dei fornitori' });
+    res.status(500).json({ error: 'Errore nel recupero dei fornitori', code: 'SUPPLIERS_FETCH_FAILED' });
   }
 });
 
@@ -56,16 +56,16 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { id, name, qualPass, techPass, status } = req.body || {};
-    if (!name) return res.status(400).json({ error: 'Il nome del fornitore è obbligatorio' });
+    if (!name) return res.status(400).json({ error: 'Il nome del fornitore è obbligatorio', code: 'SUPPLIER_NAME_REQUIRED' });
     if (!qualPass || !techPass) {
-      return res.status(400).json({ error: 'Password di qualifica e tecnica sono obbligatorie' });
+      return res.status(400).json({ error: 'Password di qualifica e tecnica sono obbligatorie', code: 'SUPPLIER_PASSWORDS_REQUIRED' });
     }
 
     if (await isPasswordInUse(qualPass, null)) {
-      return res.status(409).json({ error: 'Questa password di qualifica è già utilizzata da un altro fornitore. Scegline una diversa.' });
+      return res.status(409).json({ error: 'Questa password di qualifica è già utilizzata da un altro fornitore. Scegline una diversa.', code: 'QUAL_PASSWORD_IN_USE' });
     }
     if (await isPasswordInUse(techPass, null)) {
-      return res.status(409).json({ error: 'Questa password tecnica è già utilizzata da un altro fornitore. Scegline una diversa.' });
+      return res.status(409).json({ error: 'Questa password tecnica è già utilizzata da un altro fornitore. Scegline una diversa.', code: 'TECH_PASSWORD_IN_USE' });
     }
 
     const supplierId = id || crypto.randomUUID();
@@ -86,7 +86,7 @@ router.post('/', async (req, res) => {
     res.status(201).json({ supplier: mapRow(rows[0]) });
   } catch (err) {
     console.error('POST /api/suppliers', err);
-    res.status(500).json({ error: 'Errore nella creazione del fornitore' });
+    res.status(500).json({ error: 'Errore nella creazione del fornitore', code: 'SUPPLIER_CREATE_FAILED' });
   }
 });
 
@@ -98,10 +98,10 @@ router.put('/:id', async (req, res) => {
     const { name, qualPass, techPass, status } = req.body || {};
 
     if (qualPass && (await isPasswordInUse(qualPass, id))) {
-      return res.status(409).json({ error: 'Questa password di qualifica è già utilizzata da un altro fornitore. Scegline una diversa.' });
+      return res.status(409).json({ error: 'Questa password di qualifica è già utilizzata da un altro fornitore. Scegline una diversa.', code: 'QUAL_PASSWORD_IN_USE' });
     }
     if (techPass && (await isPasswordInUse(techPass, id))) {
-      return res.status(409).json({ error: 'Questa password tecnica è già utilizzata da un altro fornitore. Scegline una diversa.' });
+      return res.status(409).json({ error: 'Questa password tecnica è già utilizzata da un altro fornitore. Scegline una diversa.', code: 'TECH_PASSWORD_IN_USE' });
     }
 
     const sets = ['name = ?', 'status = ?'];
@@ -120,7 +120,7 @@ router.put('/:id', async (req, res) => {
     const [result] = await pool.query(`UPDATE suppliers SET ${sets.join(', ')} WHERE id = ?`, params);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Fornitore non trovato' });
+      return res.status(404).json({ error: 'Fornitore non trovato', code: 'SUPPLIER_NOT_FOUND' });
     }
 
     const [rows] = await pool.query(
@@ -130,7 +130,7 @@ router.put('/:id', async (req, res) => {
     res.json({ supplier: mapRow(rows[0]) });
   } catch (err) {
     console.error('PUT /api/suppliers/:id', err);
-    res.status(500).json({ error: "Errore nell'aggiornamento del fornitore" });
+    res.status(500).json({ error: "Errore nell'aggiornamento del fornitore", code: 'SUPPLIER_UPDATE_FAILED' });
   }
 });
 
@@ -144,19 +144,19 @@ router.patch('/:id/qualification-status', async (req, res) => {
     const { qualificationStatus, qualificationNotes } = req.body || {};
 
     if (qualificationStatus !== undefined && !QUALIFICATION_STATUSES.has(qualificationStatus)) {
-      return res.status(400).json({ error: 'Stato qualifica non valido.' });
+      return res.status(400).json({ error: 'Stato qualifica non valido.', code: 'INVALID_QUALIFICATION_STATUS' });
     }
 
     const sets = [];
     const params = [];
     if (qualificationStatus !== undefined) { sets.push('qualification_status = ?'); params.push(qualificationStatus); }
     if (qualificationNotes !== undefined) { sets.push('qualification_notes = ?'); params.push(qualificationNotes); }
-    if (!sets.length) return res.status(400).json({ error: 'Nessun campo da aggiornare.' });
+    if (!sets.length) return res.status(400).json({ error: 'Nessun campo da aggiornare.', code: 'NO_FIELDS_TO_UPDATE' });
     params.push(id);
 
     const [result] = await pool.query(`UPDATE suppliers SET ${sets.join(', ')} WHERE id = ?`, params);
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Fornitore non trovato' });
+      return res.status(404).json({ error: 'Fornitore non trovato', code: 'SUPPLIER_NOT_FOUND' });
     }
 
     const [rows] = await pool.query(
@@ -166,7 +166,7 @@ router.patch('/:id/qualification-status', async (req, res) => {
     res.json({ supplier: mapRow(rows[0]) });
   } catch (err) {
     console.error('PATCH /api/suppliers/:id/qualification-status', err);
-    res.status(500).json({ error: 'Errore nel salvataggio dello stato qualifica' });
+    res.status(500).json({ error: 'Errore nel salvataggio dello stato qualifica', code: 'QUAL_STATUS_SAVE_FAILED' });
   }
 });
 
@@ -179,7 +179,7 @@ router.delete('/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /api/suppliers/:id', err);
-    res.status(500).json({ error: 'Errore nella cancellazione del fornitore' });
+    res.status(500).json({ error: 'Errore nella cancellazione del fornitore', code: 'SUPPLIER_DELETE_FAILED' });
   }
 });
 
