@@ -87,8 +87,15 @@ export default function AdminPage({ onLogout }) {
     setTranslatingMissing(true);
     try {
       const { summary } = await api.translateMissingSettings();
-      const updatedTotal = Object.values(summary || {}).reduce((sum, s) => sum + (s.updated || 0), 0);
-      showAlert(t("translateMissingDoneAlert").replace("{count}", updatedTotal));
+      const values = Object.values(summary || {});
+      const updatedTotal = values.reduce((sum, s) => sum + (s.updated || 0), 0);
+      const failedTotal = values.reduce((sum, s) => sum + (s.failed || 0), 0);
+      const lastError = values.map((s) => s.lastError).find(Boolean);
+      let msg = t("translateMissingDoneAlert").replace("{count}", updatedTotal);
+      if (failedTotal) {
+        msg += `\n\n${t("translateMissingPartialFailure").replace("{count}", failedTotal)}${lastError ? `\n(${lastError})` : ""}`;
+      }
+      showAlert(msg);
       loadTemplates();
     } catch (e) {
       showAlert(e.message || t("translateMissingError"));

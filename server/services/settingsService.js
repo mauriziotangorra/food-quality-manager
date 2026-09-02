@@ -80,35 +80,66 @@ const LANG_ADAPTERS = {
   },
 };
 
-// Riempie con l'AI le sole lingue completamente vuote di ogni item della
-// lista (mai una lingua che ha gia' qualcosa, anche parziale). Se l'AI non è
-// configurata (niente GEMINI_API_KEY) o una singola traduzione fallisce,
-// l'item viene lasciato così com'era — il salvataggio non deve MAI fallire
-// per colpa della traduzione — ma a differenza di prima l'esito (quanti
-// elementi tradotti, quanti saltati e perché) viene tracciato in `report` e
-// restituito al chiamante, invece di sparire in un solo console.warn lato
-// server: chi salva dall'admin deve poterlo vedere.
-async function autoTranslateList(items, adapterKey, report) {
-  if (!Array.isArray(items) || !items.length) return items;
+// Traduce con l'AI le sole lingue mancanti di una LISTA di elementi, in un
+// numero MINIMO di chiamate: raggruppa tutti gli elementi che condividono la
+// stessa coppia (lingua sorgente, lingua di destinazione) e li traduce
+// insieme in una sola chiamata batch, invece di una chiamata per elemento —
+// essenziale perché il piano gratuito di Gemini ha una quota giornaliera di
+// richieste molto bassa (es. 20/giorno): 40 dichiarazioni con 1 chiamata a
+// testa la esauriscono quasi subito, con questo raggruppamento bastano al
+// più 3 chiamate (it→en, it→fr, it→es) per l'intera lista.
+// Non tocca mai una lingua che ha gia' un valore, anche parziale. Se l'AI
+// non è configurata o una chiamata batch fallisce (es. quota esaurita), gli
+// elementi coinvolti restano così come erano — il salvataggio non deve MAI
+// fallire per colpa della traduzione — e l'esito viene accumulato in
+// `report` invece di sparire in un console.warn silenzioso.
+async function batchTranslateItems(items, adapterKey, report) {
+  const changedIds = new Set();
+  if (!Array.isArray(items) || !items.length) return { items, changedIds };
   if (!translationService.isAiConfigured()) {
     report.notConfigured = true;
-    return items;
+    return { items, changedIds };
   }
+
   const adapter = LANG_ADAPTERS[adapterKey];
-  const out = [];
+  const groupsById = new Map(items.map((item) => [item.id, adapter.toGroups(item)]));
+
+  // Raggruppa per (sourceLang, targetLang): stesso "verso" di traduzione =
+  // stessa chiamata batch, indipendentemente da quanti elementi coinvolge.
+  const buckets = new Map();
   for (const item of items) {
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      const groups = await translationService.fillMissingTranslations(adapter.toGroups(item));
-      out.push(adapter.fromGroups(item, groups));
-    } catch (e) {
-      console.warn(`⚠️  Traduzione automatica saltata per un elemento (${adapterKey}, id=${item.id}): ${e.message}`);
-      report.failed += 1;
-      report.lastError = e.message;
-      out.push(item);
+    const groups = groupsById.get(item.id);
+    const { sourceLang, missing } = translationService.planTranslation(groups);
+    if (!sourceLang || !missing.length) continue;
+    for (const targetLang of missing) {
+      const key = `${sourceLang}:${targetLang}`;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push({ id: item.id, fields: groups[sourceLang] });
     }
   }
-  return out;
+
+  for (const [key, bucketItems] of buckets) {
+    const [sourceLang, targetLang] = key.split(':');
+    let result;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      result = await translationService.translateBatch(bucketItems, sourceLang, targetLang);
+    } catch (e) {
+      console.warn(`⚠️  Traduzione batch saltata (${adapterKey}, ${sourceLang}->${targetLang}, ${bucketItems.length} elementi): ${e.message}`);
+      report.failed += bucketItems.length;
+      report.lastError = e.message;
+      continue;
+    }
+    for (const { id } of bucketItems) {
+      if (!result[id]) continue;
+      const groups = groupsById.get(id);
+      groups[targetLang] = { ...groups[targetLang], ...result[id] };
+      changedIds.add(id);
+    }
+  }
+
+  const outItems = items.map((item) => (changedIds.has(item.id) ? adapter.fromGroups(item, groupsById.get(item.id)) : item));
+  return { items: outItems, changedIds };
 }
 
 // Applica un patch parziale: 'logo' e 'templates' sono indipendenti, come
@@ -128,11 +159,11 @@ async function saveGlobalSettings(patch) {
     // esterne, potenzialmente lente — non deve tenere aperta una transazione
     // mentre aspetta Gemini.
     const report = { notConfigured: false, failed: 0, lastError: null };
-    const [translatedA, translatedB, translatedC, translatedAllergeni] = await Promise.all([
-      Array.isArray(t.impegniA) ? autoTranslateList(t.impegniA, 'simple', report) : t.impegniA,
-      Array.isArray(t.impegniB) ? autoTranslateList(t.impegniB, 'impegniB', report) : t.impegniB,
-      Array.isArray(t.impegniC) ? autoTranslateList(t.impegniC, 'impegniC', report) : t.impegniC,
-      Array.isArray(t.allergeni) ? autoTranslateList(t.allergeni, 'simple', report) : t.allergeni,
+    const [{ items: translatedA }, { items: translatedB }, { items: translatedC }, { items: translatedAllergeni }] = await Promise.all([
+      Array.isArray(t.impegniA) ? batchTranslateItems(t.impegniA, 'simple', report) : { items: t.impegniA },
+      Array.isArray(t.impegniB) ? batchTranslateItems(t.impegniB, 'impegniB', report) : { items: t.impegniB },
+      Array.isArray(t.impegniC) ? batchTranslateItems(t.impegniC, 'impegniC', report) : { items: t.impegniC },
+      Array.isArray(t.allergeni) ? batchTranslateItems(t.allergeni, 'simple', report) : { items: t.allergeni },
     ]);
     if (report.notConfigured || report.failed) translationReport = report;
 
@@ -173,11 +204,11 @@ async function saveGlobalSettings(patch) {
 
 // "Seeder" per i dati GIA' presenti in DB (es. su un ambiente dove le
 // dichiarazioni sono state inserite prima che esistesse la traduzione
-// automatica): rilegge ogni tabella, traduce le sole lingue mancanti con
-// fillMissingTranslations e riscrive solo gli item effettivamente cambiati.
-// Pensata per essere invocata on-demand da un pulsante admin (mai al boot:
-// puo' fare molte chiamate AI in sequenza, troppo lenta/fragile da avere nel
-// percorso di avvio del server).
+// automatica): rilegge ogni tabella, traduce le sole lingue mancanti in
+// batch (vedi batchTranslateItems) e riscrive solo gli item effettivamente
+// cambiati. Pensata per essere invocata on-demand da un pulsante admin (mai
+// al boot: anche raggruppate, sono comunque chiamate AI, troppo
+// lente/fragili da avere nel percorso di avvio del server).
 async function translateMissingInStore() {
   if (!translationService.isAiConfigured()) {
     const err = new Error('Funzionalità di traduzione AI non configurata (GEMINI_API_KEY mancante).');
@@ -196,28 +227,25 @@ async function translateMissingInStore() {
   for (const job of jobs) {
     // eslint-disable-next-line no-await-in-loop
     const [rows] = await pool.query(`SELECT ${job.columns.join(', ')} FROM ${job.table}`);
-    const adapter = LANG_ADAPTERS[job.adapterKey];
+    const report = { notConfigured: false, failed: 0, lastError: null };
+    // eslint-disable-next-line no-await-in-loop
+    const { items: updatedRows, changedIds } = await batchTranslateItems(rows, job.adapterKey, report);
+
     let updated = 0;
-    for (const row of rows) {
-      let groups;
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        groups = await translationService.fillMissingTranslations(adapter.toGroups(row));
-      } catch (e) {
-        console.warn(`⚠️  Traduzione mancante saltata per ${job.table} id=${row.id}: ${e.message}`);
-        continue;
-      }
-      const updatedRow = adapter.fromGroups(row, groups);
-      const changedCols = job.columns.filter((c) => c !== 'id' && updatedRow[c] !== row[c]);
+    const rowsById = new Map(rows.map((r) => [r.id, r]));
+    for (const row of updatedRows) {
+      if (!changedIds.has(row.id)) continue;
+      const original = rowsById.get(row.id);
+      const changedCols = job.columns.filter((c) => c !== 'id' && row[c] !== original[c]);
       if (!changedCols.length) continue;
       // eslint-disable-next-line no-await-in-loop
       await pool.query(
         `UPDATE ${job.table} SET ${changedCols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`,
-        [...changedCols.map((c) => updatedRow[c]), row.id]
+        [...changedCols.map((c) => row[c]), row.id]
       );
       updated += 1;
     }
-    summary[job.table] = { total: rows.length, updated };
+    summary[job.table] = { total: rows.length, updated, failed: report.failed, lastError: report.lastError };
   }
   return summary;
 }
