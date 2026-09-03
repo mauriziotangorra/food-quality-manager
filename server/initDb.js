@@ -372,12 +372,6 @@ async function initDb() {
 
   } finally {
     await connection.end();
-    try {
-      const pool = require('./db');
-      await pool.end();
-    } catch(e) {
-      // Ignora, pool potrebbe non essere stato inizializzato
-    }
   }
 }
 
@@ -386,10 +380,20 @@ module.exports = { initDb };
 // Eseguito solo quando lanciato direttamente ("npm run db:init"), non
 // quando importato da app.js.
 if (require.main === module) {
-  initDb().catch((err) => {
-    console.error('❌ Errore inizializzazione database:', err.message);
-    console.error('Stack:', err.stack);
-    process.exit(1);
-  });
+  initDb()
+    .then(async () => {
+      // Quando lanciato come script standalone, chiudiamo esplicitamente il pool 
+      // globale (se è stato importato da qualche service) per permettere a Node di uscire.
+      try {
+        const pool = require('./db');
+        await pool.end();
+      } catch(e) {}
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('❌ Errore inizializzazione database:', err.message);
+      console.error('Stack:', err.stack);
+      process.exit(1);
+    });
 }
 
