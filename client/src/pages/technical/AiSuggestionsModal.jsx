@@ -88,47 +88,46 @@ function Field({ label, value, onChange, included, onToggle, multiline }) {
 
 export default function AiSuggestionsModal({ docType, data, globalConfig, onApply, onClose }) {
   const { t } = useLanguage();
-  // Copia locale editabile + flag "included" per ogni campo/riga: la revisione
-  // umana è obbligatoria prima che qualunque valore venga scritto nella scheda
-  // (l'AI qui propone soltanto, non salva mai da sola).
   const [logistics, setLogistics] = useState(() => {
     const included = {};
+    const logData = data?.logistica || data || {};
     LOGISTICS_FIELDS.forEach(({ group, key }) => {
-      included[`${group}.${key}`] = Boolean(data?.[group]?.[key]);
+      included[`${group}.${key}`] = Boolean(logData?.[group]?.[key]);
     });
-    return { values: data || {}, included };
+    return { values: logData, included };
   });
 
-  const [rows, setRows] = useState(() => (data?.rows || []).map((r) => ({ ...r, included: true })));
+  const [rowsMicro, setRowsMicro] = useState(() => (data?.microbiologici?.rows || (docType === "microbiologici" ? data?.rows : []) || []).map((r) => ({ ...r, included: true })));
+  const [rowsChem, setRowsChem] = useState(() => (data?.chimici?.rows || (docType === "chimici" ? data?.rows : []) || []).map((r) => ({ ...r, included: true })));
 
-  const [ingredients, setIngredients] = useState({ value: data?.ingredients || "", included: Boolean(data?.ingredients) });
+  const etiData = data?.etichetta || data || {};
+  const techData = data?.tecnica || data || {};
+
+  const [ingredients, setIngredients] = useState({ value: etiData?.ingredients || techData?.ingredients || "", included: Boolean(etiData?.ingredients || techData?.ingredients) });
+  
   const [nutrition, setNutrition] = useState(() => {
     const included = {};
-    NUTRITION_FIELDS.forEach(({ key }) => { included[key] = Boolean(data?.nutrition?.[key]); });
-    return { values: data?.nutrition || {}, included };
+    const nutData = etiData?.nutrition || techData?.nutrition || {};
+    NUTRITION_FIELDS.forEach(({ key }) => { included[key] = Boolean(nutData?.[key]); });
+    return { values: nutData, included };
   });
-  const [allergens, setAllergens] = useState(() => (data?.allergens || []).map((a) => ({ ...a, included: true })));
+  const [allergens, setAllergens] = useState(() => (etiData?.allergens || []).map((a) => ({ ...a, included: true })));
 
   const [tecnicaFields, setTecnicaFields] = useState(() => {
     const included = {};
-    TECNICA_FIELDS.forEach(({ key }) => { included[key] = Boolean(data?.[key]); });
-    return { values: data || {}, included };
+    TECNICA_FIELDS.forEach(({ key }) => { included[key] = Boolean(techData?.[key]); });
+    return { values: techData, included };
   });
   const [tecnicaOrganoleptic, setTecnicaOrganoleptic] = useState(() => {
     const included = {};
-    TECNICA_ORGANOLEPTIC_FIELDS.forEach(({ key }) => { included[key] = Boolean(data?.organoleptic?.[key]); });
-    return { values: data?.organoleptic || {}, included };
-  });
-  const [tecnicaNutrition, setTecnicaNutrition] = useState(() => {
-    const included = {};
-    NUTRITION_FIELDS.forEach(({ key }) => { included[key] = Boolean(data?.nutrition?.[key]); });
-    return { values: data?.nutrition || {}, included };
+    TECNICA_ORGANOLEPTIC_FIELDS.forEach(({ key }) => { included[key] = Boolean(techData?.organoleptic?.[key]); });
+    return { values: techData?.organoleptic || {}, included };
   });
   const [tecnicaGmo, setTecnicaGmo] = useState({
-    containsGmo: data?.gmo?.containsGmo || "",
-    statement: data?.gmo?.statement || "",
-    includedContains: Boolean(data?.gmo?.containsGmo),
-    includedStatement: Boolean(data?.gmo?.statement),
+    containsGmo: techData?.gmo?.containsGmo || "",
+    statement: techData?.gmo?.statement || "",
+    includedContains: Boolean(techData?.gmo?.containsGmo),
+    includedStatement: Boolean(techData?.gmo?.statement),
   });
 
   const allergenLabel = (id) => {
@@ -137,66 +136,66 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
   };
 
   const handleApply = () => {
-    if (docType === "logistica") {
-      const selected = { uvc: {}, box: {}, pallet: {} };
-      LOGISTICS_FIELDS.forEach(({ group, key }) => {
-        if (logistics.included[`${group}.${key}`]) {
-          selected[group][key] = logistics.values?.[group]?.[key] || "";
-        }
-      });
-      onApply(selected);
-    } else if (docType === "microbiologici" || docType === "chimici") {
-      onApply({ rows: rows.filter((r) => r.included).map(({ included: _i, ...r }) => r) });
-    } else if (docType === "etichetta") {
-      const selectedNutrition = {};
-      NUTRITION_FIELDS.forEach(({ key }) => { if (nutrition.included[key]) selectedNutrition[key] = nutrition.values[key] || ""; });
-      onApply({
-        ingredients: ingredients.included ? ingredients.value : "",
-        nutrition: selectedNutrition,
-        allergens: allergens.filter((a) => a.included).map(({ included: _i, ...a }) => a),
-      });
-    } else if (docType === "tecnica") {
-      const selected = {};
-      TECNICA_FIELDS.forEach(({ key }) => {
-        if (tecnicaFields.included[key]) selected[key] = tecnicaFields.values[key] || "";
-      });
-      const selectedNutrition = {};
-      NUTRITION_FIELDS.forEach(({ key }) => { if (tecnicaNutrition.included[key]) selectedNutrition[key] = tecnicaNutrition.values[key] || ""; });
-      const selectedOrganoleptic = {};
-      TECNICA_ORGANOLEPTIC_FIELDS.forEach(({ key }) => { if (tecnicaOrganoleptic.included[key]) selectedOrganoleptic[key] = tecnicaOrganoleptic.values[key] || ""; });
-      onApply({
-        ...selected,
-        nutrition: selectedNutrition,
-        organoleptic: selectedOrganoleptic,
-        gmo: {
-          containsGmo: tecnicaGmo.includedContains ? tecnicaGmo.containsGmo : "",
-          statement: tecnicaGmo.includedStatement ? tecnicaGmo.statement : "",
-        },
-      });
-    }
+    const selected = {};
+
+    const selectedLogistics = { uvc: {}, box: {}, pallet: {} };
+    LOGISTICS_FIELDS.forEach(({ group, key }) => {
+      if (logistics.included[`${group}.${key}`]) {
+        selectedLogistics[group][key] = logistics.values?.[group]?.[key] || "";
+      }
+    });
+    selected.logistica = selectedLogistics;
+
+    selected.microbiologici = { rows: rowsMicro.filter((r) => r.included).map(({ included: _i, ...r }) => r) };
+    selected.chimici = { rows: rowsChem.filter((r) => r.included).map(({ included: _i, ...r }) => r) };
+
+    const selectedNutrition = {};
+    NUTRITION_FIELDS.forEach(({ key }) => { if (nutrition.included[key]) selectedNutrition[key] = nutrition.values[key] || ""; });
+
+    selected.etichetta = {
+      ingredients: ingredients.included ? ingredients.value : "",
+      nutrition: selectedNutrition,
+      allergens: allergens.filter((a) => a.included).map(({ included: _i, ...a }) => a),
+    };
+
+    const selectedTecnica = {};
+    TECNICA_FIELDS.forEach(({ key }) => {
+      if (tecnicaFields.included[key]) selectedTecnica[key] = tecnicaFields.values[key] || "";
+    });
+    const selectedOrganoleptic = {};
+    TECNICA_ORGANOLEPTIC_FIELDS.forEach(({ key }) => { if (tecnicaOrganoleptic.included[key]) selectedOrganoleptic[key] = tecnicaOrganoleptic.values[key] || ""; });
+    
+    selected.tecnica = {
+      ...selectedTecnica,
+      nutrition: selectedNutrition,
+      organoleptic: selectedOrganoleptic,
+      gmo: {
+        containsGmo: tecnicaGmo.includedContains ? tecnicaGmo.containsGmo : "",
+        statement: tecnicaGmo.includedStatement ? tecnicaGmo.statement : "",
+      },
+    };
+
+    onApply(selected);
   };
 
   const tecnicaHasData =
     Object.values(tecnicaFields.included).some(Boolean) ||
-    Object.values(tecnicaNutrition.included).some(Boolean) ||
     Object.values(tecnicaOrganoleptic.included).some(Boolean) ||
     tecnicaGmo.includedContains || tecnicaGmo.includedStatement;
 
-  const hasAnyData =
-    docType === "logistica"
-      ? Object.values(logistics.included).some(Boolean)
-      : docType === "microbiologici" || docType === "chimici"
-      ? rows.length > 0
-      : docType === "tecnica"
-      ? tecnicaHasData
-      : ingredients.included || Object.values(nutrition.included).some(Boolean) || allergens.length > 0;
+  const etichettaHasData = ingredients.included || Object.values(nutrition.included).some(Boolean) || allergens.length > 0;
+  const logHasData = Object.values(logistics.included).some(Boolean);
+  const microHasData = rowsMicro.length > 0;
+  const chemHasData = rowsChem.length > 0;
+
+  const hasAnyData = logHasData || microHasData || chemHasData || etichettaHasData || tecnicaHasData;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
       <div className="bg-white rounded-[2rem] p-8 max-w-4xl w-full shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[85vh]">
         <div className="flex justify-between items-center mb-2 border-b border-slate-200 pb-4 shrink-0">
           <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-            <Sparkles className="text-blue-600" /> {t("aiSuggestionsTitle")} — {t(DOC_TITLE_KEYS[docType]) || docType}
+            <Sparkles className="text-blue-600" /> {t("aiSuggestionsTitle")} — {t("aiDocTitleTecnica") || "Lettura Completa"}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-900 bg-slate-100 p-2 rounded-full transition-colors">
             <X size={20} />
@@ -213,7 +212,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
             </p>
           )}
 
-          {docType === "logistica" && hasAnyData && (
+          {logHasData && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {["uvc", "box", "pallet"].map((group) => (
                 <div key={group} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
@@ -242,8 +241,9 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
             </div>
           )}
 
-          {(docType === "microbiologici" || docType === "chimici") && rows.length > 0 && (
-            <div className="space-y-2">
+          {microHasData && (
+            <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Microbiologici</h4>
               <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-slate-400 px-2 uppercase">
                 <span className="col-span-1" />
                 <span className="col-span-4">{t("logParam")}</span>
@@ -251,13 +251,13 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
                 <span className="col-span-2">{t("aiColResult")}</span>
                 <span className="col-span-3">{t("aiColCompliant")}</span>
               </div>
-              {rows.map((r, idx) => (
+              {rowsMicro.map((r, idx) => (
                 <div key={idx} className={`grid grid-cols-12 gap-2 items-center p-2 rounded-xl ${r.included ? "bg-white border border-slate-100" : "bg-slate-100 opacity-50"}`}>
                   <input
                     type="checkbox"
                     className="col-span-1 w-4 h-4 accent-blue-600"
                     checked={r.included}
-                    onChange={() => setRows((prev) => prev.map((row, i) => (i === idx ? { ...row, included: !row.included } : row)))}
+                    onChange={() => setRowsMicro((prev) => prev.map((row, i) => (i === idx ? { ...row, included: !row.included } : row)))}
                   />
                   {["p", "limite", "risultato", "conforme"].map((field) => (
                     <input
@@ -265,7 +265,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
                       disabled={!r.included}
                       className={`p-2 bg-slate-50 rounded-lg text-[10px] font-bold outline-none disabled:text-slate-400 ${field === "p" ? "col-span-4" : field === "conforme" ? "col-span-3" : "col-span-2"}`}
                       value={r[field] || ""}
-                      onChange={(e) => setRows((prev) => prev.map((row, i) => (i === idx ? { ...row, [field]: e.target.value } : row)))}
+                      onChange={(e) => setRowsMicro((prev) => prev.map((row, i) => (i === idx ? { ...row, [field]: e.target.value } : row)))}
                     />
                   ))}
                 </div>
@@ -273,7 +273,39 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
             </div>
           )}
 
-          {docType === "etichetta" && (
+          {chemHasData && (
+            <div className="space-y-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">Chimici</h4>
+              <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-slate-400 px-2 uppercase">
+                <span className="col-span-1" />
+                <span className="col-span-4">{t("logParam")}</span>
+                <span className="col-span-2">{t("aiColLimit")}</span>
+                <span className="col-span-2">{t("aiColResult")}</span>
+                <span className="col-span-3">{t("aiColCompliant")}</span>
+              </div>
+              {rowsChem.map((r, idx) => (
+                <div key={idx} className={`grid grid-cols-12 gap-2 items-center p-2 rounded-xl ${r.included ? "bg-white border border-slate-100" : "bg-slate-100 opacity-50"}`}>
+                  <input
+                    type="checkbox"
+                    className="col-span-1 w-4 h-4 accent-blue-600"
+                    checked={r.included}
+                    onChange={() => setRowsChem((prev) => prev.map((row, i) => (i === idx ? { ...row, included: !row.included } : row)))}
+                  />
+                  {["p", "limite", "risultato", "conforme"].map((field) => (
+                    <input
+                      key={field}
+                      disabled={!r.included}
+                      className={`p-2 bg-slate-50 rounded-lg text-[10px] font-bold outline-none disabled:text-slate-400 ${field === "p" ? "col-span-4" : field === "conforme" ? "col-span-3" : "col-span-2"}`}
+                      value={r[field] || ""}
+                      onChange={(e) => setRowsChem((prev) => prev.map((row, i) => (i === idx ? { ...row, [field]: e.target.value } : row)))}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {etichettaHasData && (
             <div className="space-y-6">
               {ingredients.value && (
                 <div className={`p-4 rounded-2xl border ${ingredients.included ? "bg-white border-slate-200" : "bg-slate-100 opacity-50 border-slate-100"}`}>
@@ -336,7 +368,7 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
             </div>
           )}
 
-          {docType === "tecnica" && (
+          {tecnicaHasData && (
             <div className="space-y-6">
               {Object.values(tecnicaFields.included).some(Boolean) && (
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
@@ -351,24 +383,6 @@ export default function AiSuggestionsModal({ docType, data, globalConfig, onAppl
                         included={tecnicaFields.included[f.key]}
                         onToggle={() => setTecnicaFields((prev) => ({ ...prev, included: { ...prev.included, [f.key]: !prev.included[f.key] } }))}
                         onChange={(e) => setTecnicaFields((prev) => ({ ...prev, values: { ...prev.values, [f.key]: e.target.value } }))}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {Object.values(tecnicaNutrition.included).some(Boolean) && (
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <h4 className="text-[10px] font-black uppercase text-slate-500 mb-2">{t("aiNutritionTableTitle")}</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    {NUTRITION_FIELDS.filter((f) => tecnicaNutrition.values?.[f.key]).map((f) => (
-                      <Field
-                        key={f.key}
-                        label={f.label}
-                        value={tecnicaNutrition.values?.[f.key]}
-                        included={tecnicaNutrition.included[f.key]}
-                        onToggle={() => setTecnicaNutrition((prev) => ({ ...prev, included: { ...prev.included, [f.key]: !prev.included[f.key] } }))}
-                        onChange={(e) => setTecnicaNutrition((prev) => ({ ...prev, values: { ...prev.values, [f.key]: e.target.value } }))}
                       />
                     ))}
                   </div>

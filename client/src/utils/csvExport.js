@@ -4,7 +4,7 @@ export function exportAllSpecsToCSV(productSpecs, lang) {
   if (validSpecs.length === 0) return false;
 
   let csv = 'data:text/csv;charset=utf-8,';
-  csv += 'CATALOGO SPECIFICHE TECNICHE AP 05.1.1 (Solo Attive)\n\n';
+  csv += 'CATALOGO SPECIFICHE TECNICHE AP 07.2.1 (Solo Attive)\n\n';
 
   validSpecs.forEach((spec, index) => {
     csv += `--- SCHEDA PRODOTTO ${index + 1} ---\n`;

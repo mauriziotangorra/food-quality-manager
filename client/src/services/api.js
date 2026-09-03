@@ -81,7 +81,7 @@ export const api = {
   },
   deleteUpload: (url) => request(`/api/uploads?path=${encodeURIComponent(url)}`, { method: 'DELETE' }),
 
-  // Lettura AI di un file già caricato (Tecnica / AP 05.1.1): estrae i campi
+  // Lettura AI di un file già caricato (Tecnica / AP 07.2.1): estrae i campi
   // strutturati per il pre-riempimento del form, senza scrivere nulla lato
   // server. docType: 'logistica' | 'microbiologici' | 'chimici' | 'etichetta'.
   extractDocumentData: (fileUrl, docType, allergens) =>

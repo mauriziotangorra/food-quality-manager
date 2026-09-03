@@ -8,7 +8,7 @@ export default {
   qualify: "Espace Qualification",
   qualifyDesc: "Processus de qualification technique.",
   tech: "Espace Technique",
-  techDesc: "Spécifications AP 05.1.1 illimitées.",
+  techDesc: "Spécifications AP 07.2.1 illimitées.",
   access: "Entrer",
   back: "Accueil",
   save: "Sauvegarder",
@@ -50,7 +50,7 @@ export default {
   tabDossier: "12 DOSSIER",
   tabDossierFirmato: "13 DOSSIER SIGNÉ",
 
-  ap05_title: "AP 05.1.1 SPÉCIFICATION DU PRODUIT",
+  ap05_title: "AP 07.2.1 SPÉCIFICATION DU PRODUIT",
   newSpec: "Nouvelle Spécification",
   saveSpec: "Sauvegarder",
   editSpec: "Modifier",

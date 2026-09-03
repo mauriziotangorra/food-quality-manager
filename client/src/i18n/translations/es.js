@@ -8,7 +8,7 @@ export default {
   qualify: "Área de Cualificación",
   qualifyDesc: "Proceso de cualificación técnica.",
   tech: "Área Técnica",
-  techDesc: "Especificaciones AP 05.1.1 ilimitadas.",
+  techDesc: "Especificaciones AP 07.2.1 ilimitadas.",
   access: "Entrar",
   back: "Inicio",
   save: "Guardar",
@@ -50,7 +50,7 @@ export default {
   tabDossier: "12 DOSSIER",
   tabDossierFirmato: "13 DOSSIER FIRMADO",
 
-  ap05_title: "AP 05.1.1 ESPECIFICACIÓN DEL PRODUCTO",
+  ap05_title: "AP 07.2.1 ESPECIFICACIÓN DEL PRODUCTO",
   newSpec: "Nueva Especificación",
   saveSpec: "Guardar",
   editSpec: "Editar",

@@ -18,12 +18,12 @@ const MIME_BY_EXT = {
   '.webp': 'image/webp'
 };
 
-// I tipi di upload di AP 05.1.1 (Product Specification) che hanno un mapping
+// I tipi di upload di AP 07.2.1 (Product Specification) che hanno un mapping
 // verso campi del form; "foto" (foto prodotto) resta un upload semplice,
 // senza estrazione AI (nessun campo strutturato da leggere da una foto generica).
 // "firma" non estrae campi: verifica solo se il dossier firmato caricato
 // sembra contenere una firma (riepilogo pre-invio, tab Dossier Firmato).
-const DOC_TYPES = new Set(['logistica', 'microbiologici', 'chimici', 'etichetta', 'tecnica', 'firma']);
+const DOC_TYPES = new Set(['logistica', 'microbiologici', 'chimici', 'etichetta', 'tecnica', 'firma', 'tutto']);
 
 // Risolve un fileUrl ("/uploads/<scope>/<file>") nel path assoluto sul disco,
 // verificando che resti dentro UPLOAD_ROOT e che il richiedente possa
@@ -43,7 +43,7 @@ function resolveUploadPath(req, fileUrl) {
 
 // POST /api/ai/extract - legge un file già caricato in /uploads e ne estrae i
 // campi strutturati tramite Gemini, per pre-compilare (in sola revisione lato
-// client, nessuna scrittura qui) la scheda tecnica prodotto AP 05.1.1.
+// client, nessuna scrittura qui) la scheda tecnica prodotto AP 07.2.1.
 router.post('/extract', requireAuth, async (req, res) => {
   try {
     if (!isAiConfigured()) {
