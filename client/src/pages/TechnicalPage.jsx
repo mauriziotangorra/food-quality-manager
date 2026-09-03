@@ -91,9 +91,10 @@ function setPath(obj, path, val) {
 }
 
 function buildNewSpec(t) {
+  const uniqueId = Date.now().toString() + "-" + Math.random().toString(36).substr(2, 5);
   return {
-    id: Date.now().toString(),
-    familyId: Date.now().toString(),
+    id: uniqueId,
+    familyId: uniqueId,
     isSaved: false,
     saveDate: null,
     isObsolete: false,
@@ -151,10 +152,45 @@ export default function TechnicalPage({ onLogout }) {
     if (!supplier) return;
     Promise.all([api.getQualifications(supplier.id), api.getSettings()])
       .then(([qData, settingsData]) => {
+        let loadedSpecs = qData.productSpecs || [];
+        let loadedQualData = qData.qualData || EMPTY_QUAL_DATA;
+        let specsChanged = false;
+
+        if (loadedQualData.fileC && loadedQualData.fileC.length > 0) {
+          const updatedSpecs = [...loadedSpecs];
+          loadedQualData.fileC.forEach((prod) => {
+            if (prod.denominazione && prod.denominazione.trim() !== "") {
+              const exists = updatedSpecs.some(
+                (s) => s.fileCId === prod.id || (s.master && s.master.nome === prod.denominazione)
+              );
+              if (!exists) {
+                const newSpec = buildNewSpec(t);
+                newSpec.fileCId = prod.id;
+                newSpec.master.nome = prod.denominazione;
+                newSpec.a.legalName = prod.denominazione;
+                updatedSpecs.unshift(newSpec);
+                specsChanged = true;
+              }
+            }
+          });
+          if (specsChanged) {
+            loadedSpecs = updatedSpecs;
+          }
+        }
+
         if (qData.qualData) {
           setQualData((prev) => ({ ...prev, ...qData.qualData }));
         }
-        if (qData.productSpecs) setProductSpecs(qData.productSpecs);
+        setProductSpecs(loadedSpecs);
+
+        if (specsChanged) {
+          api.saveQualifications(supplier.id, {
+            qualData: loadedQualData,
+            productSpecs: loadedSpecs,
+            lastUpdate: new Date().toISOString(),
+          }).catch(console.error);
+        }
+
         if (qData.lastUpdate) setLastSyncTime(new Date(qData.lastUpdate).toLocaleString(lang));
         setMasterLogo(settingsData?.settings?.logo || null);
         setGlobalConfig({
@@ -317,21 +353,16 @@ export default function TechnicalPage({ onLogout }) {
     try {
       let merged = null;
       for (const f of targets) {
-        // eslint-disable-next-line no-await-in-loop
-        const res = await api.extractDocumentData(f.url, importType, importType === "etichetta" ? globalConfig.allergeni : undefined);
-        merged = mergeExtracted(importType, merged, res.data || {});
+        // ALWAYS pass 'tutto' to the backend to get all possible data from the file
+        const res = await api.extractDocumentData(f.url, "tutto", globalConfig.allergeni);
+        // The server returns the 'tutto' schema. We can pass it directly.
+        merged = { ...merged, ...res.data };
       }
-      if (merged) setAiSuggestion({ specId, docType: importType, data: merged });
+      if (merged) setAiSuggestion({ specId, docType: "tutto", data: merged });
     } catch (err) {
-      // AI non configurata: nessun disturbo per il fornitore, è una feature opzionale.
       if (err.code === "AI_NOT_CONFIGURED") {
         // no-op
       } else if (err.code === "AI_QUOTA_EXCEEDED") {
-        // Messaggio pulito invece del JSON grezzo dell'errore Gemini, e
-        // chiarisce che il file È stato caricato — solo la lettura
-        // automatica è fallita — cosi' non si ricarica lo stesso file
-        // pensando che l'upload sia fallito (causa duplicati in "File
-        // allegati alla specifica").
         showAlert(`${t("aiQuotaExceeded")}\n\n${t("fileUploadedAnyway")}`);
       } else {
         showAlert(`${t("aiExtractionFailed").replace("{error}", err.message)}\n\n${t("fileUploadedAnyway")}`);
@@ -374,57 +405,72 @@ export default function TechnicalPage({ onLogout }) {
   // form, restano da salvare esplicitamente con "Salva Specifica".
   const applyAiSuggestion = (selected) => {
     if (!aiSuggestion) return;
-    const { specId, docType } = aiSuggestion;
+    const { specId } = aiSuggestion;
 
-    if (docType === "logistica") {
+    // Apply Logistics
+    if (selected.logistica) {
       ["uvc", "box", "pallet"].forEach((group) => {
-        Object.entries(selected[group] || {}).forEach(([key, val]) => {
+        Object.entries(selected.logistica[group] || {}).forEach(([key, val]) => {
           if (val) updateSpecField(specId, `log.${group}.${key}`, val);
         });
       });
-    } else if (docType === "microbiologici" || docType === "chimici") {
-      const table = docType === "microbiologici" ? "b" : "d";
-      const newRows = (selected.rows || []).map((r, i) => ({
-        id: Date.now() + i, p: r.p || "", limite: r.limite || "", risultato: r.risultato || "", conforme: r.conforme || "",
-      }));
-      if (newRows.length) {
-        setProductSpecs((prev) => prev.map((s) => (s.id === specId ? { ...s, [table]: [...s[table], ...newRows] } : s)));
+    }
+
+    // Apply Microbiologici & Chimici
+    ["microbiologici", "chimici"].forEach((type) => {
+      if (selected[type] && selected[type].rows && selected[type].rows.length > 0) {
+        const table = type === "microbiologici" ? "b" : "d";
+        const newRows = selected[type].rows.map((r, i) => ({
+          id: Date.now() + i + Math.random(),
+          p: r.p || "",
+          limite: r.limite || "",
+          risultato: r.risultato || "",
+          conforme: r.conforme || "",
+        }));
+        setProductSpecs((prev) =>
+          prev.map((s) => (s.id === specId ? { ...s, [table]: [...s[table], ...newRows] } : s))
+        );
       }
-    } else if (docType === "etichetta") {
-      if (selected.ingredients) updateSpecField(specId, "a.ingredients", selected.ingredients);
-      Object.entries(selected.nutrition || {}).forEach(([key, val]) => {
+    });
+
+    // Apply Etichetta / Tecnica general fields
+    if (selected.etichetta || selected.tecnica) {
+      const etichetta = selected.etichetta || {};
+      const tecnica = selected.tecnica || {};
+
+      const ingredients = etichetta.ingredients || tecnica.ingredients;
+      if (ingredients) updateSpecField(specId, "a.ingredients", ingredients);
+
+      const FIELD_A_KEYS = [
+        "legalName", "brand", "claim", "allergensNote", "tmc",
+        "producedIn", "batchDecode", "intendedUse", "storage", "envLabel", "packMode",
+      ];
+      FIELD_A_KEYS.forEach((key) => {
+        if (tecnica[key]) updateSpecField(specId, `a.${key}`, tecnica[key]);
+      });
+
+      const mergedNutrition = { ...(etichetta.nutrition || {}), ...(tecnica.nutrition || {}) };
+      Object.entries(mergedNutrition).forEach(([key, val]) => {
         const rowId = NUTRITION_ROW_ID[key];
         if (val && rowId) setSpecTableRow(specId, "c", rowId, t(key), val);
       });
-      // La dichiarazione allergeni e' unica per fornitore (Dichiarazione A, non
-      // per prodotto): la lettura dell'etichetta di QUESTO prodotto propone solo
-      // le presenze, senza toccare tracce/note gia' inserite manualmente.
-      if ((selected.allergens || []).length) {
+
+      if (etichetta.allergens && etichetta.allergens.length > 0) {
         setQualData((prev) => {
           const nextAllergens = { ...(prev.fileA?.allergens || {}) };
-          selected.allergens.forEach((a) => {
+          etichetta.allergens.forEach((a) => {
             nextAllergens[a.id] = { ...(nextAllergens[a.id] || {}), presenza: a.presenza };
           });
           return { ...prev, fileA: { ...prev.fileA, allergens: nextAllergens } };
         });
       }
-    } else if (docType === "tecnica") {
-      const FIELD_A_KEYS = [
-        "legalName", "brand", "claim", "ingredients", "allergensNote", "tmc",
-        "producedIn", "batchDecode", "intendedUse", "storage", "envLabel", "packMode",
-      ];
-      FIELD_A_KEYS.forEach((key) => {
-        if (selected[key]) updateSpecField(specId, `a.${key}`, selected[key]);
-      });
-      Object.entries(selected.nutrition || {}).forEach(([key, val]) => {
-        const rowId = NUTRITION_ROW_ID[key];
-        if (val && rowId) setSpecTableRow(specId, "c", rowId, t(key), val);
-      });
-      Object.entries(selected.organoleptic || {}).forEach(([key, val]) => {
+
+      Object.entries(tecnica.organoleptic || {}).forEach(([key, val]) => {
         if (val) updateSpecField(specId, `e.${key}`, val);
       });
-      if (selected.gmo?.containsGmo) updateSpecField(specId, "g.containsGmo", selected.gmo.containsGmo);
-      if (selected.gmo?.statement) updateSpecField(specId, "g.statement", selected.gmo.statement);
+
+      if (tecnica.gmo?.containsGmo) updateSpecField(specId, "g.containsGmo", tecnica.gmo.containsGmo);
+      if (tecnica.gmo?.statement) updateSpecField(specId, "g.statement", tecnica.gmo.statement);
     }
 
     setAiSuggestion(null);

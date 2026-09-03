@@ -9,7 +9,7 @@ export default {
   qualify: "Area Qualifica",
   qualifyDesc: "Iter di qualifica tecnica e sanitaria.",
   tech: "Area Tecnica",
-  techDesc: "Infinite specifiche prodotto AP 05.1.1.",
+  techDesc: "Infinite specifiche prodotto AP 07.2.1.",
   access: "Entra",
   back: "Home",
   save: "Sincronizza Cloud",
@@ -55,7 +55,7 @@ export default {
   tabDossierFirmato: "13 DOSSIER FIRMATO",
 
   // Area tecnica
-  ap05_title: "AP 05.1.1 SPECIFICA TECNICA PRODOTTO",
+  ap05_title: "AP 07.2.1 SPECIFICA TECNICA PRODOTTO",
   newSpec: "Nuova Specifica",
   saveSpec: "Salva Specifica",
   editSpec: "Modifica",

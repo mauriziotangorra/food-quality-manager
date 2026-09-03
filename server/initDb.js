@@ -338,7 +338,6 @@ async function initDb() {
       );
     }
 
-    // --- Admin di default ---
     const adminUsername = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || '0404';
 
@@ -354,8 +353,31 @@ async function initDb() {
     console.log('✅ Database "food_quality_manager", tabelle e account di default creati/verificati con successo.');
     console.log(`   Admin: ${adminUsername} / ${adminRows.length ? '(esistente, non modificato)' : adminPassword}`);
     console.log('   Fornitori seed: TEST/test/test, DEMO/1/1 (solo se non già presenti)');
+
+    // Eseguiamo la traduzione per eventuali record che non hanno ancora i campi multilingua popolati
+    // (come richiesto, non tocchiamo i dati compilati dai fornitori, ma solo i template).
+    try {
+      const settingsService = require('./services/settingsService');
+      const translationService = require('./services/translationService');
+      if (translationService.isAiConfigured()) {
+        console.log('🔄 Avvio seeder traduzioni per record mancanti (impegni_a, impegni_b, impegni_c, allergens)...');
+        const summary = await settingsService.translateMissingInStore();
+        console.log('   Report traduzioni effettuate:', summary);
+      } else {
+        console.log('⚠️ Traduzione AI non configurata, salto il seeder traduzioni.');
+      }
+    } catch (e) {
+      console.error('⚠️ Errore durante il seeder traduzioni:', e.message);
+    }
+
   } finally {
     await connection.end();
+    try {
+      const pool = require('./db');
+      await pool.end();
+    } catch(e) {
+      // Ignora, pool potrebbe non essere stato inizializzato
+    }
   }
 }
 

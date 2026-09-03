@@ -29,7 +29,7 @@ function isSupportedMimeType(mimeType) {
 }
 
 // Schemi di risposta per tipo di documento: forzano Gemini a rispondere con
-// JSON che ricalca esattamente i campi del form (AP 05.1.1), cosi' il client
+// JSON che ricalca esattamente i campi del form (AP 07.2.1), cosi' il client
 // puo' mapparli 1:1 senza bisogno di parsing libero o euristiche di testo.
 const STRING_FIELDS = (names) => Object.fromEntries(names.map((n) => [n, { type: Type.STRING }]));
 
@@ -107,6 +107,19 @@ const RESPONSE_SCHEMAS = {
   }
 };
 
+// Aggiungiamo 'tutto' che racchiude tutto, combinando i vari schemi.
+// Chimici e microbiologici li combiniamo in due array separati o usiamo lo schema base.
+RESPONSE_SCHEMAS.tutto = {
+  type: Type.OBJECT,
+  properties: {
+    logistica: { type: Type.OBJECT, properties: RESPONSE_SCHEMAS.logistica.properties },
+    microbiologici: { type: Type.OBJECT, properties: RESPONSE_SCHEMAS.microbiologici.properties },
+    chimici: { type: Type.OBJECT, properties: RESPONSE_SCHEMAS.chimici.properties },
+    etichetta: { type: Type.OBJECT, properties: RESPONSE_SCHEMAS.etichetta.properties },
+    tecnica: { type: Type.OBJECT, properties: RESPONSE_SCHEMAS.tecnica.properties }
+  }
+};
+
 const BASE_PROMPTS = {
   logistica:
     "Sei un assistente che legge schede tecniche logistiche di prodotti alimentari (peso, dimensioni e composizione di confezione UVC, cartone e pallet). " +
@@ -146,13 +159,23 @@ const BASE_PROMPTS = {
   firma:
     "Sei un assistente che controlla se un documento PDF caricato come 'dossier di qualifica firmato' contiene effettivamente una firma. " +
     "Cerca in tutte le pagine una firma manoscritta, un timbro aziendale, o una firma digitale/elettronica (es. blocco di firma di DocuSign, Adobe Sign o simili). " +
-    'Rispondi SOLO con un oggetto JSON conforme allo schema fornito: hasSignature vale "Sì" se hai trovato una firma o un timbro chiaramente visibile su almeno una pagina, "No" altrimenti o se non sei sicuro.'
+    'Rispondi SOLO con un oggetto JSON conforme allo schema fornito: hasSignature vale "Sì" se hai trovato una firma o un timbro chiaramente visibile su almeno una pagina, "No" altrimenti o se non sei sicuro.',
+  tutto:
+    "Sei un assistente che analizza documenti tecnici di prodotti alimentari. Questo documento potrebbe contenere INSIEME informazioni di logistica, analisi microbiologiche, chimico-fisiche, dati di etichetta o una scheda tecnica completa. " +
+    "Il tuo compito è estrarre TUTTE le informazioni presenti per popolare i rispettivi campi dello schema JSON, che include 5 sotto-oggetti (logistica, microbiologici, chimici, etichetta, tecnica).\n\n" +
+    "- LOGISTICA: Estrai peso, dimensioni e composizione di confezione UVC, cartone e pallet (se presenti).\n" +
+    "- MICROBIOLOGICI: Estrai i parametri testati, limite, risultato e conformità (Sì/No).\n" +
+    "- CHIMICI: Estrai i parametri chimico-fisici testati, limite, risultato e conformità.\n" +
+    "- ETICHETTA / TECNICA: Estrai gli ingredienti, allergeni, dichiarazione nutrizionale (energia in kJ e kcal separati, grassi, carboidrati, ecc.), caratteristiche organolettiche, OGM, legalName, brand, conservazione e così via.\n\n" +
+    "IMPORTANTE: Per gli allergeni dell'etichetta/scheda, usa esattamente gli id dalla lista fornita di seguito per indicarne la presenza ('Sì (Ingrediente)' o 'Sì (Derivato/Additivo)').\n" +
+    "Lista allergeni noti (id: nome): {{ALLERGEN_LIST}}\n\n" +
+    "Rispondi SOLO con l'oggetto JSON richiesto. Per ogni intera sezione non presente nel documento, restituisci un oggetto vuoto, o array vuoto. Non inventare informazioni non presenti."
 };
 
 function buildPrompt(docType, allergens) {
-  if (docType !== 'etichetta') return BASE_PROMPTS[docType];
+  if (docType !== 'etichetta' && docType !== 'tutto') return BASE_PROMPTS[docType];
   const list = (allergens || []).map((a) => `${a.id}: ${a.it || a.en || a.type || ''}`).join('; ') || '(nessuno)';
-  return BASE_PROMPTS.etichetta.replace('{{ALLERGEN_LIST}}', list);
+  return BASE_PROMPTS[docType].replace('{{ALLERGEN_LIST}}', list);
 }
 
 // Legge il file dal disco e chiede a Gemini di estrarne i campi strutturati

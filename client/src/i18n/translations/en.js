@@ -8,7 +8,7 @@ export default {
   qualify: "Qualification Area",
   qualifyDesc: "Technical and sanitary qualification process.",
   tech: "Technical Area",
-  techDesc: "Unlimited AP 05.1.1 product specifications.",
+  techDesc: "Unlimited AP 07.2.1 product specifications.",
   access: "Enter",
   back: "Home",
   save: "Sync Cloud",
@@ -50,7 +50,7 @@ export default {
   tabDossier: "12 DOSSIER",
   tabDossierFirmato: "13 SIGNED DOSSIER",
 
-  ap05_title: "AP 05.1.1 PRODUCT SPECIFICATION",
+  ap05_title: "AP 07.2.1 PRODUCT SPECIFICATION",
   newSpec: "New Specification",
   saveSpec: "Save Specification",
   editSpec: "Edit",
