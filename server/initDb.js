@@ -230,6 +230,9 @@ async function initDb() {
     await addColumnIfMissing(connection, dbName, 'suppliers', 'qualification_status', "VARCHAR(50) NOT NULL DEFAULT 'not_qualified'");
     await addColumnIfMissing(connection, dbName, 'suppliers', 'qualification_notes', 'TEXT NULL');
 
+    // Fix logo column type to allow base64 strings (for environments with ephemeral filesystems like Railway)
+    await connection.query('ALTER TABLE app_settings MODIFY COLUMN logo_url LONGTEXT NULL');
+
     // --- Dichiarazione A (OGM/Etichettatura/Impegni): seminata SOLO se la
     // tabella e' vuota, stesso criterio del Questionario — non deve mai
     // sovrascrivere impegni gia' modificati/aggiunti dall'admin.

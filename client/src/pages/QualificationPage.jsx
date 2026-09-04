@@ -98,7 +98,7 @@ export default function QualificationPage({ onLogout }) {
           }));
         }
         if (qData.lastUpdate) setLastSyncTime(new Date(qData.lastUpdate).toLocaleString(lang));
-        setMasterLogo(settingsData?.settings?.logo || null);
+        setMasterLogo(settingsData?.settings?.logo || '/logo.png');
         setGlobalConfig({
           allergeni: settingsData?.settings?.templates?.allergeni || [],
           impegniA: settingsData?.settings?.templates?.impegniA || [],
