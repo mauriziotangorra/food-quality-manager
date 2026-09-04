@@ -150,7 +150,7 @@ export default function AdminPage({ onLogout }) {
           impegniB: data?.settings?.templates?.impegniB || [],
           impegniC: data?.settings?.templates?.impegniC || [],
         });
-        setMasterLogo(data?.settings?.logo || null);
+        setMasterLogo(data?.settings?.logo || '/logo.png');
       })
       .catch(() => showAlert(t("adminLoadDeclarationsError")))
       .finally(() => setLoadingTemplates(false));
@@ -269,11 +269,24 @@ export default function AdminPage({ onLogout }) {
     const file = e.target.files[0];
     e.target.value = "";
     if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      return showAlert(t("alertFileSize") || "Il file supera i 2 MB");
+    }
+
     try {
-      const uploaded = await api.uploadFile("global", file);
-      await api.saveSettings({ logo: uploaded.url });
-      setMasterLogo(uploaded.url);
-      showAlert(t("logoSaved"));
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result;
+        try {
+          await api.saveSettings({ logo: base64 });
+          setMasterLogo(base64);
+          showAlert(t("logoSaved"));
+        } catch (err) {
+          showAlert(err.message || t("logoUploadError"));
+        }
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
       showAlert(err.message || t("logoUploadError"));
     }
@@ -282,9 +295,11 @@ export default function AdminPage({ onLogout }) {
   const handleMasterLogoDelete = () => {
     showConfirm(t("logoDeleteConfirm"), async () => {
       try {
-        if (masterLogo) await api.deleteUpload(masterLogo).catch(() => {});
+        if (masterLogo && masterLogo.startsWith('/uploads/')) {
+          await api.deleteUpload(masterLogo).catch(() => {});
+        }
         await api.saveSettings({ logo: null });
-        setMasterLogo(null);
+        setMasterLogo('/logo.png');
         showAlert(t("logoRemoved"));
       } catch (err) {
         showAlert(err.message || t("logoRemoveError"));

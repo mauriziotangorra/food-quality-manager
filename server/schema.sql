@@ -82,7 +82,7 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS app_settings (
   id INT PRIMARY KEY DEFAULT 1,
-  logo_url VARCHAR(500) NULL
+  logo_url LONGTEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO app_settings (id, logo_url) VALUES (1, NULL);

@@ -18,7 +18,7 @@ export default function HomePage({ onNavigate }) {
     api
       .bootstrap()
       .then((data) => {
-        setMasterLogo(data?.settings?.logo || null);
+        setMasterLogo(data?.settings?.logo || '/logo.png');
         setOnline(true);
       })
       .catch(() => setOnline(false));
