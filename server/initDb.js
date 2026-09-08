@@ -343,26 +343,31 @@ async function initDb() {
 
     const adminUsername = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || '0404';
-    const forceReset = process.env.ADMIN_RESET_PASSWORD === 'true' || process.env.ADMIN_FORCE_PASSWORD === 'true';
 
-    const [adminRows] = await connection.query('SELECT id FROM admins WHERE username = ?', [adminUsername]);
+    const [adminRows] = await connection.query('SELECT id, password_hash FROM admins WHERE username = ?', [adminUsername]);
     if (!adminRows.length) {
       const adminHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
       await connection.query(
         'INSERT INTO admins (username, password_hash) VALUES (?, ?)',
         [adminUsername, adminHash]
       );
-    } else if (forceReset) {
-      const adminHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
-      await connection.query(
-        'UPDATE admins SET password_hash = ? WHERE username = ?',
-        [adminHash, adminUsername]
-      );
-      console.log(`   Admin: password aggiornata a "${adminPassword}" (forzata via ADMIN_RESET_PASSWORD).`);
+      console.log(`   Admin: account "${adminUsername}" creato con password "${adminPassword}".`);
+    } else {
+      const match = await bcrypt.compare(adminPassword, adminRows[0].password_hash);
+      if (!match) {
+        const adminHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
+        await connection.query(
+          'UPDATE admins SET password_hash = ? WHERE username = ?',
+          [adminHash, adminUsername]
+        );
+        console.log(`   Admin: password per "${adminUsername}" aggiornata con successo a "${adminPassword}".`);
+      } else {
+        console.log(`   Admin: "${adminUsername}" verificato (password già allineata a "${adminPassword}").`);
+      }
     }
 
     console.log('✅ Database "food_quality_manager", tabelle e account di default creati/verificati con successo.');
-    console.log(`   Admin: ${adminUsername} / ${adminRows.length && !forceReset ? '(esistente, non modificato)' : adminPassword}`);
+    console.log(`   Admin: ${adminUsername} / ${adminPassword}`);
     console.log('   Fornitori seed: TEST/test/test, DEMO/1/1 (solo se non già presenti)');
 
     // Eseguiamo la traduzione per eventuali record che non hanno ancora i campi multilingua popolati
