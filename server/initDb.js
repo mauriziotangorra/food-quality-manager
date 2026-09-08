@@ -343,6 +343,7 @@ async function initDb() {
 
     const adminUsername = process.env.ADMIN_DEFAULT_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || '0404';
+    const forceReset = process.env.ADMIN_RESET_PASSWORD === 'true' || process.env.ADMIN_FORCE_PASSWORD === 'true';
 
     const [adminRows] = await connection.query('SELECT id FROM admins WHERE username = ?', [adminUsername]);
     if (!adminRows.length) {
@@ -351,10 +352,17 @@ async function initDb() {
         'INSERT INTO admins (username, password_hash) VALUES (?, ?)',
         [adminUsername, adminHash]
       );
+    } else if (forceReset) {
+      const adminHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
+      await connection.query(
+        'UPDATE admins SET password_hash = ? WHERE username = ?',
+        [adminHash, adminUsername]
+      );
+      console.log(`   Admin: password aggiornata a "${adminPassword}" (forzata via ADMIN_RESET_PASSWORD).`);
     }
 
     console.log('✅ Database "food_quality_manager", tabelle e account di default creati/verificati con successo.');
-    console.log(`   Admin: ${adminUsername} / ${adminRows.length ? '(esistente, non modificato)' : adminPassword}`);
+    console.log(`   Admin: ${adminUsername} / ${adminRows.length && !forceReset ? '(esistente, non modificato)' : adminPassword}`);
     console.log('   Fornitori seed: TEST/test/test, DEMO/1/1 (solo se non già presenti)');
 
     // Eseguiamo la traduzione per eventuali record che non hanno ancora i campi multilingua popolati

@@ -13,6 +13,7 @@
     "server:dev": "nodemon server/app.js",
     "dev": "nodemon server/app.js",
     "db:init": "node server/initDb.js",
+    "admin:reset": "node server/resetAdmin.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
