@@ -3,6 +3,8 @@ const pool = require('../db');
 const { requireAuth, requireOwnerOrAdmin } = require('../middleware/auth');
 const { getQualData, saveQualData } = require('../services/qualificationService');
 const { sendQualificationSubmittedEmail } = require('../services/emailService');
+const { translateSpecObject, translateQualDataObject } = require('../services/translationService');
+const { computeHash, getCached, setCached } = require('../services/translationCache');
 
 const router = express.Router();
 
@@ -97,6 +99,107 @@ router.put('/:supplierId', requireOwnerOrAdmin, async (req, res) => {
   } catch (err) {
     console.error('PUT /api/qualifications/:supplierId', err);
     res.status(500).json({ error: 'Errore nel salvataggio della qualifica' });
+  }
+});
+
+// POST /api/qualifications/:supplierId/translate
+// Traduce on-demand le specifiche tecniche e/o il dossier di qualifica nella
+// lingua richiesta ('en', 'fr', 'es'), con caching trasparente nel database.
+router.post('/:supplierId/translate', requireOwnerOrAdmin, async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+    const {
+      targetLang = 'en',
+      sourceLang = 'it',
+      scope = 'all', // 'all' | 'specs' | 'qual'
+      specs: clientSpecs,
+      qualData: clientQualData,
+    } = req.body || {};
+
+    if (!targetLang || targetLang === sourceLang) {
+      return res.json({ ok: true, specs: clientSpecs, qualData: clientQualData, targetLang });
+    }
+
+    let translatedSpecs = null;
+    let translatedQualData = null;
+
+    // --- 1) Traduzione Specifiche Tecniche ---
+    if (scope === 'all' || scope === 'specs') {
+      let specs = clientSpecs;
+      if (!specs) {
+        const [rows] = await pool.query('SELECT product_specs FROM qualifications WHERE supplier_id = ?', [supplierId]);
+        specs = rows[0]?.product_specs ? JSON.parse(rows[0].product_specs) : [];
+      }
+
+      if (Array.isArray(specs) && specs.length > 0) {
+        translatedSpecs = await Promise.all(
+          specs.map(async (spec) => {
+            const specId = spec.id || 'default';
+            // Estraiamo i soli campi testo per un hash stabile
+            const textToHash = {
+              master: spec.master,
+              a: spec.a,
+              b: spec.b,
+              c: spec.c,
+              d: spec.d,
+              e: spec.e,
+              g: spec.g,
+            };
+            const sourceHash = computeHash(textToHash);
+            const cacheKey = `${supplierId}_spec_${specId}_${targetLang}`;
+
+            const cached = await getCached(cacheKey, sourceHash);
+            if (cached) return cached;
+
+            const translated = await translateSpecObject(spec, sourceLang, targetLang);
+            await setCached(cacheKey, targetLang, sourceHash, translated);
+            return translated;
+          })
+        );
+      } else {
+        translatedSpecs = specs;
+      }
+    }
+
+    // --- 2) Traduzione QualData (Dossier Fornitore) ---
+    if (scope === 'all' || scope === 'qual') {
+      let qual = clientQualData;
+      if (!qual) {
+        qual = await getQualData(supplierId);
+      }
+
+      if (qual) {
+        const textToHash = {
+          allergens: qual.fileA?.allergens,
+          answers: qual.fileD?.answers,
+          fileC: qual.fileC,
+          rawMaterials: qual.rawMaterials,
+          foodFraudDefense: qual.foodFraudDefense,
+        };
+        const sourceHash = computeHash(textToHash);
+        const cacheKey = `${supplierId}_qual_${targetLang}`;
+
+        const cached = await getCached(cacheKey, sourceHash);
+        if (cached) {
+          translatedQualData = cached;
+        } else {
+          translatedQualData = await translateQualDataObject(qual, sourceLang, targetLang);
+          await setCached(cacheKey, targetLang, sourceHash, translatedQualData);
+        }
+      } else {
+        translatedQualData = qual;
+      }
+    }
+
+    res.json({
+      ok: true,
+      targetLang,
+      specs: translatedSpecs,
+      qualData: translatedQualData,
+    });
+  } catch (err) {
+    console.error('POST /api/qualifications/:supplierId/translate', err);
+    res.status(500).json({ error: err.message || 'Errore durante la traduzione' });
   }
 });
 

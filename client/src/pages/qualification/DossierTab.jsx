@@ -1,10 +1,24 @@
 import React from "react";
 import { FileSearch, Download } from "lucide-react";
 import { generateQualificationDossierPDF } from "../../utils/pdfTemplates";
+import { api } from "../../services/api";
 
-export default function DossierTab({ t, lang, qualData, setQualData, globalConfig, masterLogo, supplierName, saveImmediate }) {
-  const handleGenerate = () => {
-    generateQualificationDossierPDF({ qualData, supplierName, globalConfig, lang, t, masterLogoUrl: masterLogo });
+export default function DossierTab({ t, lang, qualData, setQualData, globalConfig, masterLogo, supplierId, supplierName, saveImmediate }) {
+  const handleGenerate = async () => {
+    let qualToExport = qualData;
+    if (lang && lang.toLowerCase() !== 'it' && supplierId) {
+      try {
+        const res = await api.translateQualifications(supplierId, {
+          targetLang: lang,
+          scope: 'qual',
+          qualData,
+        });
+        if (res.qualData) qualToExport = res.qualData;
+      } catch (e) {
+        console.warn('Dossier translation error before PDF export:', e.message);
+      }
+    }
+    generateQualificationDossierPDF({ qualData: qualToExport, supplierName, globalConfig, lang, t, masterLogoUrl: masterLogo });
   };
 
   const setField = (field, value) => {
@@ -57,7 +71,7 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
           <button
             onClick={async () => {
               await saveImmediate(qualData);
-              handleGenerate();
+              await handleGenerate();
             }}
             className="bg-slate-900 text-white px-20 py-8 rounded-[2rem] font-black text-2xl uppercase tracking-tighter hover:bg-emerald-600 transition-all shadow-2xl flex items-center gap-6 mx-auto"
           >

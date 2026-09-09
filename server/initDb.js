@@ -233,6 +233,17 @@ async function initDb() {
     // Fix logo column type to allow base64 strings (for environments with ephemeral filesystems like Railway)
     await connection.query('ALTER TABLE app_settings MODIFY COLUMN logo_url LONGTEXT NULL');
 
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS translations_cache (
+        cache_key VARCHAR(128) NOT NULL PRIMARY KEY,
+        target_lang VARCHAR(10) NOT NULL,
+        source_hash VARCHAR(64) NOT NULL,
+        translated_content LONGTEXT NOT NULL,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_tc_lang (target_lang)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // --- Dichiarazione A (OGM/Etichettatura/Impegni): seminata SOLO se la
     // tabella e' vuota, stesso criterio del Questionario — non deve mai
     // sovrascrivere impegni gia' modificati/aggiunti dall'admin.

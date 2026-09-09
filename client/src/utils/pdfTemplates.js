@@ -51,6 +51,23 @@ function isImageFile(name = '') {
   return /\.(jpe?g|png|gif|webp)$/i.test(name);
 }
 
+function formatYesNo(val, t) {
+  if (!val) return t('no');
+  const normalized = String(val).trim().toLowerCase();
+  if (['si', 'sì', 'yes', 'oui'].includes(normalized)) return t('yes');
+  if (['no', 'non'].includes(normalized)) return t('no');
+  return val;
+}
+
+function formatAnswer(val, t) {
+  if (!val) return '-';
+  const normalized = String(val).trim().toLowerCase();
+  if (['si', 'sì', 'yes', 'oui'].includes(normalized)) return t('yes');
+  if (['no', 'non'].includes(normalized)) return t('no');
+  if (['n/a', 'na', 'non applicabile', 'not applicable'].includes(normalized)) return 'N/A';
+  return val;
+}
+
 function openPrintWindow(title, bodyHtml, extraStyle = '') {
   const win = window.open('', '_blank');
   if (!win) {
@@ -165,7 +182,7 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
           const langKey = lang.toLowerCase();
           const row = qualData.fileA?.allergens?.[all.id] || {};
           const allergenName = all[langKey] || all.it || '';
-          return `<tr><td><b>${allergenName}</b></td><td>${row.presenza || 'No'}</td><td>${row.tracce || 'No'}</td><td>${row.note || ''}</td></tr>`;
+          return `<tr><td><b>${allergenName}</b></td><td>${formatYesNo(row.presenza, t)}</td><td>${formatYesNo(row.tracce, t)}</td><td>${row.note || ''}</td></tr>`;
         }).join('')}
       </table>
     </div>
@@ -210,7 +227,7 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
             const questionText = imp[langKey] || imp.it || '';
             const ans = answers[imp.id] || {};
             const headerRow = showHeader ? `<tr><td colspan="4" style="background:#f1f5f9; font-weight:900; text-transform:uppercase; font-size:9px;">${sectionText}</td></tr>` : '';
-            return `${headerRow}<tr><td style="text-align:center;">${idx + 1}</td><td>${questionText}</td><td style="text-align:center;"><b>${ans.answer || '-'}</b></td><td>${ans.notes || ''}</td></tr>`;
+            return `${headerRow}<tr><td style="text-align:center;">${idx + 1}</td><td>${questionText}</td><td style="text-align:center;"><b>${formatAnswer(ans.answer, t)}</b></td><td>${ans.notes || ''}</td></tr>`;
           }).join('');
         })()}
       </table>
@@ -299,9 +316,14 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
         ................................................
       </div>
     </div>
+    ${lang && lang.toLowerCase() !== 'it' ? `
+      <div style="margin-top: 30px; border-top: 1px dashed #cbd5e1; padding-top: 8px; font-size: 8px; color: #64748b; text-align: center; font-style: italic; page-break-inside: avoid;">
+        ${t('translationDisclaimer')}
+      </div>
+    ` : ''}
   `;
 
-  openPrintWindow(`Dossier Qualifica - ${anagrafica.rs || supplierName || 'Fornitore'}`, body);
+  openPrintWindow(`${t('reportOfficialTitle')} - ${anagrafica.rs || supplierName || 'Fornitore'}`, body);
 }
 
 // --- 2) SPECIFICA TECNICA PRODOTTO (Tab 6, standard / IFP) ---
@@ -317,7 +339,7 @@ export function generateSpecPDF({ spec, qualData, lang, t, masterLogoUrl, pdfTyp
     visualAttachmentsHtml = `
       <div style="page-break-before: always;"></div>
       <div class="section">
-        <div class="title">ALLEGATI VISIVI (FOTO PRODOTTO ED ETICHETTE)</div>
+        <div class="title">${t('visualAttachmentsTitle') || 'ALLEGATI VISIVI (FOTO PRODOTTO ED ETICHETTE)'}</div>
         <div style="padding: 20px; text-align: center;">
           ${imagesToRender.map((img) => `
             <div style="margin-bottom: 40px; page-break-inside: avoid;">
@@ -356,7 +378,7 @@ export function generateSpecPDF({ spec, qualData, lang, t, masterLogoUrl, pdfTyp
 
     <div style="text-align: center; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
       <h2 style="margin:0 0 5px 0; color: #0f172a;">${t('ap05_title')}</h2>
-      <p style="margin:0; color: #64748b; font-weight: bold;">Stato: ${spec.isObsolete ? t('statusArchived') : 'ATTIVA'} | ${t('rev')}: ${spec.header?.revision || '0'} | Data: ${spec.saveDate || 'Bozza'}</p>
+      <p style="margin:0; color: #64748b; font-weight: bold;">${t('statusLabel') || 'Stato'}: ${spec.isObsolete ? t('statusArchived') : (t('statusActive') || 'ATTIVA')} | ${t('rev')}: ${spec.header?.revision || '0'} | ${t('dateLabel') || 'Data'}: ${spec.saveDate || (t('draftLabel') || 'Bozza')}</p>
     </div>
 
     <table style="margin-bottom: 20px;">
@@ -445,7 +467,7 @@ export function generateSpecPDF({ spec, qualData, lang, t, masterLogoUrl, pdfTyp
           <td class="label">${t('dims')}</td>
           <td>${spec.log?.uvc?.l || '-'} x ${spec.log?.uvc?.p || '-'} x ${spec.log?.uvc?.h || '-'}</td>
           <td>${spec.log?.box?.l || '-'} x ${spec.log?.box?.p || '-'} x ${spec.log?.box?.h || '-'}</td>
-          <td>H Tot: ${spec.log?.pallet?.alt || '-'}</td>
+          <td>${t('hTot') || 'H Tot'}: ${spec.log?.pallet?.alt || '-'}</td>
         </tr>
         <tr>
           <td class="label">${t('netDrain')}</td>
@@ -457,13 +479,13 @@ export function generateSpecPDF({ spec, qualData, lang, t, masterLogoUrl, pdfTyp
           <td class="label">${t('tareGross')}</td>
           <td>${spec.log?.uvc?.tara || '-'} / ${spec.log?.uvc?.pesoLordo || '-'}</td>
           <td>${spec.log?.box?.tara || '-'} / ${spec.log?.box?.pesoLordo || '-'}</td>
-          <td>Tot Lordo: ${spec.log?.pallet?.pesoTot || '-'}</td>
+          <td>${t('grossTotal') || 'Tot Lordo'}: ${spec.log?.pallet?.pesoTot || '-'}</td>
         </tr>
         <tr>
           <td class="label">${t('composition')}</td>
           <td>-</td>
-          <td>Pz x Cart: ${spec.log?.box?.pz || '-'}</td>
-          <td>Crt/Str: ${spec.log?.pallet?.cLayer || '-'} | Strati: ${spec.log?.pallet?.layers || '-'} | Tot Crt: ${spec.log?.pallet?.totC || '-'}</td>
+          <td>${t('pcsPerBox') || 'Pz x Cart'}: ${spec.log?.box?.pz || '-'}</td>
+          <td>${t('crtPerLayer') || 'Crt/Str'}: ${spec.log?.pallet?.cLayer || '-'} | ${t('layersLabel') || 'Strati'}: ${spec.log?.pallet?.layers || '-'} | ${t('totCrt') || 'Tot Crt'}: ${spec.log?.pallet?.totC || '-'}</td>
         </tr>
       </table>
     </div>
@@ -482,10 +504,16 @@ export function generateSpecPDF({ spec, qualData, lang, t, masterLogoUrl, pdfTyp
       </div>
     </div>
 
+    ${lang && lang.toLowerCase() !== 'it' ? `
+      <div style="margin-top: 30px; border-top: 1px dashed #cbd5e1; padding-top: 8px; font-size: 8px; color: #64748b; text-align: center; font-style: italic; page-break-inside: avoid;">
+        ${t('translationDisclaimer')}
+      </div>
+    ` : ''}
+
     ${visualAttachmentsHtml}
   `;
 
-  openPrintWindow(`Specifica Tecnica - ${spec.master?.nome || 'Prodotto'}`, body);
+  openPrintWindow(`${t('specTitlePrefix') || 'Specifica Tecnica'} - ${spec.master?.nome || t('product') || 'Prodotto'}`, body);
 }
 
 // --- 3) LETTERA IMPEGNO SCHEDE TECNICHE ---

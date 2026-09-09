@@ -355,3 +355,20 @@ CREATE TABLE IF NOT EXISTS qual_dossier (
   impegno_place VARCHAR(255), impegno_date VARCHAR(20),
   CONSTRAINT fk_qd_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- 8) CACHE TRADUZIONI DINAMICHE (Dossier e Specifiche Tecniche)
+--    Memorizza le traduzioni di campi testo libero inseriti dai fornitori
+--    (ingredienti, note, decodifica lotto, questionario, ecc.)
+--    indicizzate per cache_key (es. supplierId_qual_en o supplierId_spec_id_en)
+--    e source_hash (hash MD5 del testo originale). Se il testo originale
+--    cambia, l'hash cambia e la traduzione viene ricalcolata automaticamente.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS translations_cache (
+  cache_key VARCHAR(128) NOT NULL PRIMARY KEY,
+  target_lang VARCHAR(10) NOT NULL,
+  source_hash VARCHAR(64) NOT NULL,
+  translated_content LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_tc_lang (target_lang)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

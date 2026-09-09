@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, UploadCloud, PlusCircle, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, UploadCloud, PlusCircle, Eye, EyeOff, Loader2, Languages } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from "../hooks/useAuth";
 import { useModal } from "../hooks/useModal";
@@ -128,7 +128,7 @@ function buildNewSpec(t) {
 }
 
 export default function TechnicalPage({ onLogout }) {
-  const { t, lang } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
   const { session } = useAuth();
   const { showAlert, showConfirm } = useModal();
   const supplier = session?.supplier;
@@ -146,7 +146,38 @@ export default function TechnicalPage({ onLogout }) {
   const [historySpec, setHistorySpec] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Mappa delle specifiche tradotte on-demand per lingua ({ en: [...specs], fr: [...specs], ... })
+  const [translatedSpecsMap, setTranslatedSpecsMap] = useState({});
+  const [isTranslatingSpecs, setIsTranslatingSpecs] = useState(false);
+
   const isTestUser = supplier?.name?.toUpperCase() === "TEST" || supplier?.name?.toUpperCase() === "DEMO";
+
+  // Quando la lingua corrente non è 'it', traduce le specifiche con caching automatico
+  useEffect(() => {
+    if (!supplier || !productSpecs.length || lang === 'it') return;
+    if (translatedSpecsMap[lang]) return;
+
+    let isMounted = true;
+    setIsTranslatingSpecs(true);
+    api.translateQualifications(supplier.id, {
+      targetLang: lang,
+      scope: 'specs',
+      specs: productSpecs,
+    })
+      .then((res) => {
+        if (isMounted && res.specs) {
+          setTranslatedSpecsMap((prev) => ({ ...prev, [lang]: res.specs }));
+        }
+      })
+      .catch((err) => console.warn('Auto-translate specs failed:', err.message))
+      .finally(() => {
+        if (isMounted) setIsTranslatingSpecs(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [lang, supplier?.id, productSpecs]);
+
+  const activeSpecs = (lang !== 'it' && translatedSpecsMap[lang]) ? translatedSpecsMap[lang] : productSpecs;
 
   useEffect(() => {
     if (!supplier) return;
@@ -513,8 +544,31 @@ export default function TechnicalPage({ onLogout }) {
     if (!ok) showAlert(t("alertNoSpecs"));
   };
 
-  const handleExportSpecPdf = (spec, pdfType = "standard") => {
-    generateSpecPDF({ spec, qualData, globalConfig, lang, t, masterLogoUrl: masterLogo, pdfType });
+  const handleExportSpecPdf = async (spec, pdfType = "standard") => {
+    let specToExport = spec;
+    let qualToExport = qualData;
+
+    if (lang && lang.toLowerCase() !== 'it') {
+      const found = activeSpecs.find((s) => s.id === spec.id);
+      if (found) {
+        specToExport = found;
+      } else {
+        try {
+          const res = await api.translateQualifications(supplier.id, {
+            targetLang: lang,
+            scope: 'all',
+            specs: [spec],
+            qualData,
+          });
+          if (res.specs?.[0]) specToExport = res.specs[0];
+          if (res.qualData) qualToExport = res.qualData;
+        } catch (e) {
+          console.warn('Export translation error, using current spec:', e.message);
+        }
+      }
+    }
+
+    generateSpecPDF({ spec: specToExport, qualData: qualToExport, globalConfig, lang, t, masterLogoUrl: masterLogo, pdfType });
   };
 
   if (!supplier) return null;
@@ -603,10 +657,29 @@ export default function TechnicalPage({ onLogout }) {
           saveImmediate={(next) => persist(next, productSpecs)}
         />
 
+        {lang !== 'it' && (
+          <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-between text-blue-900 text-xs font-bold shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <Languages size={18} className="text-blue-600 shrink-0" />
+              <span>
+                {isTranslatingSpecs
+                  ? t('translatingContent').replace('{lang}', lang.toUpperCase())
+                  : t('autoTranslatedBanner').replace('{lang}', lang.toUpperCase())}
+              </span>
+            </div>
+            <button
+              onClick={() => setLang('it')}
+              className="text-blue-700 underline font-black hover:text-blue-900 transition ml-4 shrink-0"
+            >
+              {t('viewOriginal')}
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h3 className="text-3xl font-black uppercase tracking-tighter text-slate-900">{t("techDesc")}</h3>
           <div className="flex flex-wrap items-center gap-4">
-            {productSpecs.some((s) => s.isObsolete) && (
+            {activeSpecs.some((s) => s.isObsolete) && (
               <button onClick={() => setShowObsolete((v) => !v)} className="bg-slate-200 text-slate-600 px-6 py-4 rounded-2xl font-black uppercase text-xs shadow-sm hover:bg-slate-300 transition-colors flex items-center gap-2">
                 {showObsolete ? <EyeOff size={18} /> : <Eye size={18} />}
                 {showObsolete ? t("hideObsolete") : t("showObsolete")}
@@ -622,7 +695,7 @@ export default function TechnicalPage({ onLogout }) {
           <div className="text-center text-slate-400 font-bold py-20">{t("loading")}</div>
         ) : (
           <div className="space-y-8">
-            {productSpecs
+            {activeSpecs
               .filter((s) => showObsolete || !s.isObsolete)
               .map((spec) => (
                 <SpecEditor

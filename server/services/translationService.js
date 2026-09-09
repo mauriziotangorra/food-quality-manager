@@ -218,4 +218,261 @@ function planTranslation(langGroups) {
   return { sourceLang, missing };
 }
 
-module.exports = { translateBatch, planTranslation, isAiConfigured, ALL_LANGS };
+/**
+ * Translates an entire product spec object into the target language.
+ * Leaves numeric values, codes, IDs, flags, and attachments untouched.
+ */
+async function translateSpecObject(spec, sourceLang = 'it', targetLang = 'en') {
+  if (!spec || sourceLang === targetLang) return spec;
+  if (!isAiConfigured()) return spec;
+
+  const clone = JSON.parse(JSON.stringify(spec));
+  const items = [];
+
+  // Master
+  if (clone.master?.nome) {
+    items.push({ id: 'master', fields: { nome: clone.master.nome } });
+  }
+
+  // Section A
+  if (clone.a) {
+    const aFields = {};
+    ['legalName', 'brand', 'claim', 'ingredients', 'allergensNote', 'batchDecode', 'intendedUse', 'storage', 'envLabel', 'packMode', 'producedIn'].forEach((f) => {
+      if (clone.a[f]) aFields[f] = clone.a[f];
+    });
+    if (Object.keys(aFields).length) {
+      items.push({ id: 'section_a', fields: aFields });
+    }
+  }
+
+  // Section B (Chemical-physical)
+  if (Array.isArray(clone.b)) {
+    clone.b.forEach((row, idx) => {
+      const bFields = {};
+      if (row.p) bFields.p = row.p;
+      if (row.limite) bFields.limite = row.limite;
+      if (row.risultato) bFields.risultato = row.risultato;
+      if (row.conforme) bFields.conforme = row.conforme;
+      if (Object.keys(bFields).length) {
+        items.push({ id: `b_${idx}`, fields: bFields });
+      }
+    });
+  }
+
+  // Section C (Nutritional table parameter names, if customized)
+  if (Array.isArray(clone.c)) {
+    clone.c.forEach((row, idx) => {
+      if (row.p) {
+        items.push({ id: `c_${idx}`, fields: { p: row.p } });
+      }
+    });
+  }
+
+  // Section D (Microbiological)
+  if (Array.isArray(clone.d)) {
+    clone.d.forEach((row, idx) => {
+      const dFields = {};
+      if (row.p) dFields.p = row.p;
+      if (row.limite) dFields.limite = row.limite;
+      if (row.risultato) dFields.risultato = row.risultato;
+      if (row.conforme) dFields.conforme = row.conforme;
+      if (Object.keys(dFields).length) {
+        items.push({ id: `d_${idx}`, fields: dFields });
+      }
+    });
+  }
+
+  // Section E (Organoleptic)
+  if (clone.e) {
+    const eFields = {};
+    ['consistency', 'aroma', 'look', 'taste'].forEach((f) => {
+      if (clone.e[f]) eFields[f] = clone.e[f];
+    });
+    if (Object.keys(eFields).length) {
+      items.push({ id: 'section_e', fields: eFields });
+    }
+  }
+
+  // Section G (GMO)
+  if (clone.g) {
+    const gFields = {};
+    if (clone.g.statement) gFields.statement = clone.g.statement;
+    if (clone.g.containsGmo) gFields.containsGmo = clone.g.containsGmo;
+    if (Object.keys(gFields).length) {
+      items.push({ id: 'section_g', fields: gFields });
+    }
+  }
+
+  if (!items.length) return clone;
+
+  const result = await translateBatch(items, sourceLang, targetLang);
+
+  // Apply translations back to clone
+  if (result.master?.nome) clone.master.nome = result.master.nome;
+
+  if (result.section_a && clone.a) {
+    Object.assign(clone.a, result.section_a);
+  }
+
+  if (Array.isArray(clone.b)) {
+    clone.b.forEach((row, idx) => {
+      if (result[`b_${idx}`]) Object.assign(row, result[`b_${idx}`]);
+    });
+  }
+
+  if (Array.isArray(clone.c)) {
+    clone.c.forEach((row, idx) => {
+      if (result[`c_${idx}`]?.p) row.p = result[`c_${idx}`].p;
+    });
+  }
+
+  if (Array.isArray(clone.d)) {
+    clone.d.forEach((row, idx) => {
+      if (result[`d_${idx}`]) Object.assign(row, result[`d_${idx}`]);
+    });
+  }
+
+  if (result.section_e && clone.e) {
+    Object.assign(clone.e, result.section_e);
+  }
+
+  if (result.section_g && clone.g) {
+    Object.assign(clone.g, result.section_g);
+  }
+
+  return clone;
+}
+
+/**
+ * Translates an entire qualData object into the target language.
+ */
+async function translateQualDataObject(qualData, sourceLang = 'it', targetLang = 'en') {
+  if (!qualData || sourceLang === targetLang) return qualData;
+  if (!isAiConfigured()) return qualData;
+
+  const clone = JSON.parse(JSON.stringify(qualData));
+  const items = [];
+
+  // File A: allergen custom notes
+  if (clone.fileA?.allergens) {
+    Object.entries(clone.fileA.allergens).forEach(([allId, row]) => {
+      const allFields = {};
+      if (row.note) allFields.note = row.note;
+      if (row.presenza) allFields.presenza = row.presenza;
+      if (row.tracce) allFields.tracce = row.tracce;
+      if (Object.keys(allFields).length) {
+        items.push({ id: `allergen_${allId}`, fields: allFields });
+      }
+    });
+  }
+
+  // File D: questionnaire answers & notes
+  if (clone.fileD?.answers) {
+    Object.entries(clone.fileD.answers).forEach(([qId, ans]) => {
+      const qFields = {};
+      if (ans.notes) qFields.notes = ans.notes;
+      if (ans.answer) qFields.answer = ans.answer;
+      if (Object.keys(qFields).length) {
+        items.push({ id: `question_${qId}`, fields: qFields });
+      }
+    });
+  }
+
+  // File C: product rows
+  if (Array.isArray(clone.fileC)) {
+    clone.fileC.forEach((p, idx) => {
+      const pFields = {};
+      if (p.tipologia) pFields.tipologia = p.tipologia;
+      if (p.denominazione) pFields.denominazione = p.denominazione;
+      if (p.origine) pFields.origine = p.origine;
+      if (p.shelfLife) pFields.shelfLife = p.shelfLife;
+      if (Object.keys(pFields).length) {
+        items.push({ id: `filec_${idx}`, fields: pFields });
+      }
+    });
+  }
+
+  // Raw materials
+  if (Array.isArray(clone.rawMaterials)) {
+    clone.rawMaterials.forEach((m, idx) => {
+      const rmFields = {};
+      if (m.name) rmFields.name = m.name;
+      if (m.frequency) rmFields.frequency = m.frequency;
+      if (m.notes) rmFields.notes = m.notes;
+      if (Object.keys(rmFields).length) {
+        items.push({ id: `rm_${idx}`, fields: rmFields });
+      }
+    });
+  }
+
+  // Food Fraud & Food Defense
+  if (clone.foodFraudDefense) {
+    const ffdFields = {};
+    if (clone.foodFraudDefense.foodFraud?.appliesTo) {
+      ffdFields.foodFraudAppliesTo = clone.foodFraudDefense.foodFraud.appliesTo;
+    }
+    if (clone.foodFraudDefense.foodDefense?.appliesTo) {
+      ffdFields.foodDefenseAppliesTo = clone.foodDefense.foodDefense.appliesTo;
+    }
+    if (Object.keys(ffdFields).length) {
+      items.push({ id: 'food_fraud_defense', fields: ffdFields });
+    }
+  }
+
+  if (!items.length) return clone;
+
+  const result = await translateBatch(items, sourceLang, targetLang);
+
+  // Apply translations back to clone
+  if (clone.fileA?.allergens) {
+    Object.entries(clone.fileA.allergens).forEach(([allId, row]) => {
+      if (result[`allergen_${allId}`]) {
+        Object.assign(row, result[`allergen_${allId}`]);
+      }
+    });
+  }
+
+  if (clone.fileD?.answers) {
+    Object.entries(clone.fileD.answers).forEach(([qId, ans]) => {
+      if (result[`question_${qId}`]) {
+        Object.assign(ans, result[`question_${qId}`]);
+      }
+    });
+  }
+
+  if (Array.isArray(clone.fileC)) {
+    clone.fileC.forEach((p, idx) => {
+      if (result[`filec_${idx}`]) {
+        Object.assign(p, result[`filec_${idx}`]);
+      }
+    });
+  }
+
+  if (Array.isArray(clone.rawMaterials)) {
+    clone.rawMaterials.forEach((m, idx) => {
+      if (result[`rm_${idx}`]) {
+        Object.assign(m, result[`rm_${idx}`]);
+      }
+    });
+  }
+
+  if (clone.foodFraudDefense && result.food_fraud_defense) {
+    if (result.food_fraud_defense.foodFraudAppliesTo && clone.foodFraudDefense.foodFraud) {
+      clone.foodFraudDefense.foodFraud.appliesTo = result.food_fraud_defense.foodFraudAppliesTo;
+    }
+    if (result.food_fraud_defense.foodDefenseAppliesTo && clone.foodFraudDefense.foodDefense) {
+      clone.foodFraudDefense.foodDefense.appliesTo = result.food_fraud_defense.foodDefenseAppliesTo;
+    }
+  }
+
+  return clone;
+}
+
+module.exports = {
+  translateBatch,
+  planTranslation,
+  isAiConfigured,
+  ALL_LANGS,
+  translateSpecObject,
+  translateQualDataObject,
+};
