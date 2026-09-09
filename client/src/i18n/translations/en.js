@@ -487,5 +487,24 @@ export default {
   haccpPrpOprpDesc: "Multiple upload of the prerequisites and documentation relating to the control measures required by the supplier's HACCP system.",
   haccpInfoHint: 'If HACCP, flow charts, PRP, or control measures vary between products marketed under IFP, upload the relevant documents and indicate the product or product family to which they apply under each file (e.g. "Biscuits" or "Chocolate biscuit"). If multiple products share the same document, a single upload is sufficient, indicating the affected family.',
   appliesToApplyPlaceholder: "E.g. Biscuits, Chocolate biscuit...",
-  placeCityPlaceholder: "E.g. Milan"
+  placeCityPlaceholder: "E.g. Milan",
+
+  // PDF and dynamic translations
+  statusLabel: "Status",
+  statusActive: "ACTIVE",
+  dateLabel: "Date",
+  draftLabel: "Draft",
+  visualAttachmentsTitle: "VISUAL ATTACHMENTS (PRODUCT PHOTOS AND LABELS)",
+  hTot: "Total H",
+  grossTotal: "Total Gross",
+  pcsPerBox: "Pcs / Carton",
+  crtPerLayer: "Cartons/Layer",
+  layersLabel: "Layers",
+  totCrt: "Total Cartons",
+  specTitlePrefix: "Technical Specification",
+  product: "Product",
+  translationDisclaimer: "Document automatically translated for consultation purposes. The original text submitted by the supplier prevails for legal and regulatory purposes.",
+  autoTranslatedBanner: "You are viewing the version automatically translated into {lang}.",
+  translatingContent: "Translating content ({lang})...",
+  viewOriginal: "Show original (IT)"
 };

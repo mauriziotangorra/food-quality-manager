@@ -104,6 +104,11 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data)
     }),
+  translateQualifications: (supplierId, options = {}) =>
+    request(`/api/qualifications/${encodeURIComponent(supplierId)}/translate`, {
+      method: 'POST',
+      body: JSON.stringify(options)
+    }),
 
   // Fornitori (CRUD admin)
   getSuppliers: () => request('/api/suppliers'),

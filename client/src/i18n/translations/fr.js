@@ -487,5 +487,24 @@ export default {
   haccpPrpOprpDesc: "Téléchargement multiple des prérequis et de la documentation relative aux mesures de contrôle requises par le système HACCP du fournisseur.",
   haccpInfoHint: 'Si le HACCP, les diagrammes de flux, les PRP ou les mesures de contrôle varient entre les produits commercialisés sous IFP, téléchargez les documents pertinents et indiquez sous chaque fichier le produit ou la famille de produits auquel ils s\'appliquent (ex. "Biscuits" ou "Biscuit au chocolat"). Si plusieurs produits partagent le même document, un seul téléchargement suffit, en indiquant la famille concernée.',
   appliesToApplyPlaceholder: "Ex. Biscuits, Biscuit au chocolat...",
-  placeCityPlaceholder: "Ex. Milan"
+  placeCityPlaceholder: "Ex. Milan",
+
+  // PDF et traductions dynamiques
+  statusLabel: "Statut",
+  statusActive: "ACTIF",
+  dateLabel: "Date",
+  draftLabel: "Brouillon",
+  visualAttachmentsTitle: "PIÈCES JOINTES VISUELLES (PHOTOS PRODUIT ET ÉTIQUETTES)",
+  hTot: "H Totale",
+  grossTotal: "Total Brut",
+  pcsPerBox: "Pcs / Carton",
+  crtPerLayer: "Cartons/Couche",
+  layersLabel: "Couches",
+  totCrt: "Total Cartons",
+  specTitlePrefix: "Spécification Technique",
+  product: "Produit",
+  translationDisclaimer: "Document traduit automatiquement à des fins de consultation. Le texte original soumis par le fournisseur prévaut à des fins légales et réglementaires.",
+  autoTranslatedBanner: "Vous consultez la version traduite automatiquement en {lang}.",
+  translatingContent: "Traduction du contenu en cours ({lang})...",
+  viewOriginal: "Afficher l'original (IT)"
 };

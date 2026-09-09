@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, ArrowLeft, UploadCloud } from "lucide-react";
+import { CheckCircle2, ArrowLeft, UploadCloud, Languages } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from "../hooks/useAuth";
 import { useModal } from "../hooks/useModal";
@@ -62,7 +62,7 @@ const TABS = [
 ];
 
 export default function QualificationPage({ onLogout }) {
-  const { t, lang } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
   const { session } = useAuth();
   const { showAlert } = useModal();
   const supplier = session?.supplier;
@@ -74,7 +74,38 @@ export default function QualificationPage({ onLogout }) {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Mappa del qualData tradotto on-demand per lingua ({ en: {...}, fr: {...}, ... })
+  const [translatedQualMap, setTranslatedQualMap] = useState({});
+  const [isTranslatingQual, setIsTranslatingQual] = useState(false);
+
   const isTestUser = supplier?.name?.toUpperCase() === "TEST" || supplier?.name?.toUpperCase() === "DEMO";
+
+  // Quando la lingua corrente non è 'it', traduce qualData con caching automatico
+  useEffect(() => {
+    if (!supplier || !qualData || lang === 'it') return;
+    if (translatedQualMap[lang]) return;
+
+    let isMounted = true;
+    setIsTranslatingQual(true);
+    api.translateQualifications(supplier.id, {
+      targetLang: lang,
+      scope: 'qual',
+      qualData,
+    })
+      .then((res) => {
+        if (isMounted && res.qualData) {
+          setTranslatedQualMap((prev) => ({ ...prev, [lang]: res.qualData }));
+        }
+      })
+      .catch((err) => console.warn('Auto-translate qualData failed:', err.message))
+      .finally(() => {
+        if (isMounted) setIsTranslatingQual(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [lang, supplier?.id, qualData]);
+
+  const activeQualData = (lang !== 'it' && translatedQualMap[lang]) ? translatedQualMap[lang] : qualData;
 
   useEffect(() => {
     if (!supplier) return;
@@ -159,7 +190,7 @@ export default function QualificationPage({ onLogout }) {
   const tabProps = {
     t,
     lang,
-    qualData,
+    qualData: activeQualData,
     setQualData,
     globalConfig,
     setGlobalConfig,
@@ -198,6 +229,25 @@ export default function QualificationPage({ onLogout }) {
       </nav>
 
       <div className="max-w-7xl mx-auto p-4 md:p-12">
+        {lang !== 'it' && (
+          <div className="mb-6 p-4 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-between text-blue-900 text-xs font-bold shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <Languages size={18} className="text-blue-600 shrink-0" />
+              <span>
+                {isTranslatingQual
+                  ? t('translatingContent').replace('{lang}', lang.toUpperCase())
+                  : t('autoTranslatedBanner').replace('{lang}', lang.toUpperCase())}
+              </span>
+            </div>
+            <button
+              onClick={() => setLang('it')}
+              className="text-blue-700 underline font-black hover:text-blue-900 transition ml-4 shrink-0"
+            >
+              {t('viewOriginal')}
+            </button>
+          </div>
+        )}
+
         <div className="flex bg-white/50 backdrop-blur p-2 rounded-[2.5rem] border border-slate-200 mb-6 md:mb-12 overflow-x-auto shadow-inner">
           {TABS.map((tab) => (
             <button
