@@ -72,7 +72,7 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
         <div className="space-y-8">
           <section className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100">
             <h5 className="text-[10px] font-black uppercase mb-2 text-emerald-600">{t("supplierUnderReview")}</h5>
-            <p className="text-xl font-black uppercase tracking-tighter text-emerald-900">{qualData.anagrafica.rs || supplierName}</p>
+            <p className="text-xl font-black uppercase tracking-tighter text-emerald-900">{qualData?.anagrafica?.rs || supplierName}</p>
           </section>
           <button
             type="button"
