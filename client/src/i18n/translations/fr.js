@@ -245,7 +245,11 @@ export default {
 
   impegnoTitle: "Lettre d'Engagement Fiches Techniques",
   impegnoDesc: "Générez, signez et téléchargez le document d'engagement pour la mise à jour continue des fiches techniques.",
-  downloadImpegno: "Générer PDF Engagement",
+  impegnoStep1: "1. Générer le Document",
+  impegnoStep2: "2. Charger le Document Signé",
+  downloadBtn: "Télécharger",
+  removeBtn: "Supprimer",
+  cancel: "Annuler",
   uploadImpegno: "Charger PDF Signé",
   impObj: "Objet : Engagement de mise à jour et de validité des fiches techniques",
   impSubj: "Le/La soussigné/e, en tant que représentant légal ou personne autorisée au nom de la société :",

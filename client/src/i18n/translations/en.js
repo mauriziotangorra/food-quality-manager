@@ -245,7 +245,11 @@ export default {
 
   impegnoTitle: "Technical Sheets Commitment Letter",
   impegnoDesc: "Generate, sign, and upload the commitment document for continuous updating of technical sheets.",
-  downloadImpegno: "Generate Commitment PDF",
+  impegnoStep1: "1. Generate Document",
+  impegnoStep2: "2. Upload Signed Document",
+  downloadBtn: "Download",
+  removeBtn: "Remove",
+  cancel: "Cancel",
   uploadImpegno: "Upload Signed PDF",
   impObj: "Subject: Commitment to update and validity of technical sheets",
   impSubj: "The undersigned, as legal representative or authorized person on behalf of the company:",

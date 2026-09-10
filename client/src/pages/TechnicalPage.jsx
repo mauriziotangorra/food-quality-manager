@@ -134,7 +134,7 @@ export default function TechnicalPage({ onLogout }) {
   const supplier = session?.supplier;
 
   const [qualData, setQualData] = useState(EMPTY_QUAL_DATA);
-  const [productSpecs, setProductSpecs] = useState([]);
+  const [productSpecs, _setProductSpecs] = useState([]);
   const [globalConfig, setGlobalConfig] = useState({ allergeni: [], impegniA: [], impegniB: [] });
   const [masterLogo, setMasterLogo] = useState(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -148,6 +148,23 @@ export default function TechnicalPage({ onLogout }) {
 
   // Mappa delle specifiche tradotte on-demand per lingua ({ en: [...specs], fr: [...specs], ... })
   const [translatedSpecsMap, setTranslatedSpecsMap] = useState({});
+
+  const setProductSpecs = (updater) => {
+    _setProductSpecs((prevSpecs) => {
+      const nextSpecs = typeof updater === "function" ? updater(prevSpecs) : updater;
+
+      if (lang === 'it' || showOriginal) {
+        setTranslatedSpecsMap({});
+      } else {
+        setTranslatedSpecsMap((prevMap) => {
+          if (!prevMap[lang]) return prevMap;
+          const nextTrSpecs = typeof updater === "function" ? updater(prevMap[lang]) : updater;
+          return { ...prevMap, [lang]: nextTrSpecs };
+        });
+      }
+      return nextSpecs;
+    });
+  };
   const [isTranslatingSpecs, setIsTranslatingSpecs] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
 
@@ -214,7 +231,7 @@ export default function TechnicalPage({ onLogout }) {
         if (qData.qualData) {
           setQualData((prev) => ({ ...prev, ...qData.qualData }));
         }
-        setProductSpecs(loadedSpecs);
+        _setProductSpecs(loadedSpecs);
 
         if (specsChanged) {
           api.saveQualifications(supplier.id, {
@@ -308,20 +325,16 @@ export default function TechnicalPage({ onLogout }) {
     // area tecnica, quindi qui si usa la stessa doppia conferma delle altre
     // cancellazioni dell'app.
     showConfirm(t("alertDeletePrompt"), () => {
-      setProductSpecs((prev) => {
-        const next = prev.filter((s) => s.id !== id);
-        persist(qualData, next);
-        return next;
-      });
+      const next = productSpecs.filter((s) => s.id !== id);
+      setProductSpecs(next);
+      persist(qualData, next);
     });
   };
 
   const saveSpec = (specId) => {
-    setProductSpecs((prev) => {
-      const next = prev.map((s) => (s.id === specId ? { ...s, isSaved: true, saveDate: new Date().toLocaleDateString() } : s));
-      persist(qualData, next);
-      return next;
-    });
+    const next = productSpecs.map((s) => (s.id === specId ? { ...s, isSaved: true, saveDate: new Date().toLocaleDateString() } : s));
+    setProductSpecs(next);
+    persist(qualData, next);
     showAlert(t("alertSaved"));
   };
 
@@ -340,12 +353,10 @@ export default function TechnicalPage({ onLogout }) {
     newRevision.saveDate = null;
     newRevision.header.revision = parseInt(newRevision.header.revision || 0, 10) + 1;
 
-    setProductSpecs((prev) => {
-      const next = prev.map((s) => (s.id === specId ? { ...s, isObsolete: true, isSaved: true } : s));
-      next.unshift(newRevision);
-      persist(qualData, next);
-      return next;
-    });
+    const next = productSpecs.map((s) => (s.id === specId ? { ...s, isObsolete: true, isSaved: true } : s));
+    next.unshift(newRevision);
+    setProductSpecs(next);
+    persist(qualData, next);
     setExpandedSpecId(newRevision.id);
   };
 
@@ -358,18 +369,16 @@ export default function TechnicalPage({ onLogout }) {
       const res = await api.uploadFile(supplier.id, file);
       uploaded.push({ name: file.name, url: res.url });
     }
-    setProductSpecs((prev) => {
-      const next = prev.map((s) => {
-        if (s.id !== specId) return s;
-        return {
-          ...s,
-          [fieldName]: [...(s[fieldName] || []), ...uploaded],
-          importFlags: importType ? { ...(s.importFlags || {}), [importType]: true } : s.importFlags,
-        };
-      });
-      persist(qualData, next);
-      return next;
+    const next = productSpecs.map((s) => {
+      if (s.id !== specId) return s;
+      return {
+        ...s,
+        [fieldName]: [...(s[fieldName] || []), ...uploaded],
+        importFlags: importType ? { ...(s.importFlags || {}), [importType]: true } : s.importFlags,
+      };
     });
+    setProductSpecs(next);
+    persist(qualData, next);
     return uploaded;
   };
 
@@ -512,16 +521,14 @@ export default function TechnicalPage({ onLogout }) {
 
   const removeSpecFile = (specId, fieldName, idx) => {
     showConfirm(t("alertDeletePrompt"), () => {
-      setProductSpecs((prev) => {
-        const next = prev.map((s) => {
-          if (s.id !== specId) return s;
-          const removed = s[fieldName][idx];
-          if (removed?.url) api.deleteUpload(removed.url).catch(() => {});
-          return { ...s, [fieldName]: s[fieldName].filter((_, i) => i !== idx) };
-        });
-        persist(qualData, next);
-        return next;
+      const next = productSpecs.map((s) => {
+        if (s.id !== specId) return s;
+        const removed = s[fieldName][idx];
+        if (removed?.url) api.deleteUpload(removed.url).catch(() => {});
+        return { ...s, [fieldName]: s[fieldName].filter((_, i) => i !== idx) };
       });
+      setProductSpecs(next);
+      persist(qualData, next);
     });
   };
 
@@ -531,11 +538,9 @@ export default function TechnicalPage({ onLogout }) {
     if (!file) return;
     try {
       const uploaded = await api.uploadFile(supplier.id, file);
-      setProductSpecs((prev) => {
-        const next = prev.map((s) => (s.id === specId ? { ...s, a: { ...s.a, brandLogo: uploaded.url } } : s));
-        persist(qualData, next);
-        return next;
-      });
+      const next = productSpecs.map((s) => (s.id === specId ? { ...s, a: { ...s.a, brandLogo: uploaded.url } } : s));
+      setProductSpecs(next);
+      persist(qualData, next);
     } catch (err) {
       showAlert(err.message || t("alertFileSize"));
     }

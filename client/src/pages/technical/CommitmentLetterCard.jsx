@@ -52,7 +52,7 @@ export default function CommitmentLetterCard({ t, lang, qualData, setQualData, s
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200">
-          <h4 className="text-[10px] font-black uppercase text-slate-500 mb-4">1. Genera Documento</h4>
+          <h4 className="text-[10px] font-black uppercase text-slate-500 mb-4">{t("impegnoStep1")}</h4>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <input
               className="w-full p-3 rounded-xl border border-slate-200 shadow-sm font-bold text-sm outline-none focus:ring-2 ring-blue-500"
@@ -76,7 +76,7 @@ export default function CommitmentLetterCard({ t, lang, qualData, setQualData, s
         </div>
 
         <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200 flex flex-col justify-center items-center text-center">
-          <h4 className="text-[10px] font-black uppercase text-slate-500 mb-4 w-full text-left">2. Carica Documento Firmato</h4>
+          <h4 className="text-[10px] font-black uppercase text-slate-500 mb-4 w-full text-left">{t("impegnoStep2")}</h4>
           {impegno.fileUrl ? (
             <div className="w-full">
               <div className="bg-emerald-100 text-emerald-700 p-4 rounded-2xl flex items-center justify-between border border-emerald-300 mb-4">
@@ -87,10 +87,10 @@ export default function CommitmentLetterCard({ t, lang, qualData, setQualData, s
               </div>
               <div className="flex gap-4">
                 <a href={impegno.fileUrl} download={impegno.fileName} className="flex-1 bg-white text-emerald-700 py-3 rounded-xl font-black uppercase text-xs hover:bg-emerald-50 transition-colors shadow border border-emerald-200 flex items-center justify-center gap-2">
-                  <Download size={16} /> Scarica
+                  <Download size={16} /> {t("downloadBtn")}
                 </a>
                 <button onClick={handleDelete} className="flex-1 bg-white text-red-600 py-3 rounded-xl font-black uppercase text-xs hover:bg-red-50 transition-colors shadow border border-red-200 flex items-center justify-center gap-2">
-                  <Trash2 size={16} /> Rimuovi
+                  <Trash2 size={16} /> {t("removeBtn")}
                 </button>
               </div>
             </div>
