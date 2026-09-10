@@ -246,11 +246,22 @@ async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en')
     items.push({ id: 'master', fields: { nome: clone.master.nome } });
   }
 
+  // Header
+  if (clone.header) {
+    const hFields = {};
+    ['ean', 'uvcWeight', 'revision'].forEach((f) => {
+      if (clone.header[f] && clone.header[f].trim()) hFields[f] = clone.header[f];
+    });
+    if (Object.keys(hFields).length) {
+      items.push({ id: 'header', fields: hFields });
+    }
+  }
+
   // Section A
   if (clone.a) {
     const aFields = {};
-    ['legalName', 'brand', 'claim', 'ingredients', 'allergensNote', 'batchDecode', 'intendedUse', 'storage', 'envLabel', 'packMode', 'producedIn'].forEach((f) => {
-      if (clone.a[f]) aFields[f] = clone.a[f];
+    ['legalName', 'brand', 'claim', 'ingredients', 'allergensNote', 'batchDecode', 'intendedUse', 'storage', 'envLabel', 'packMode', 'producedIn', 'tmc', 'giorniGarantiti'].forEach((f) => {
+      if (clone.a[f] && clone.a[f].trim()) aFields[f] = clone.a[f];
     });
     if (Object.keys(aFields).length) {
       items.push({ id: 'section_a', fields: aFields });
@@ -261,21 +272,24 @@ async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en')
   if (Array.isArray(clone.b)) {
     clone.b.forEach((row, idx) => {
       const bFields = {};
-      if (row.p) bFields.p = row.p;
-      if (row.limite) bFields.limite = row.limite;
-      if (row.risultato) bFields.risultato = row.risultato;
-      if (row.conforme) bFields.conforme = row.conforme;
+      if (row.p && row.p.trim()) bFields.p = row.p;
+      if (row.limite && row.limite.trim()) bFields.limite = row.limite;
+      if (row.risultato && row.risultato.trim()) bFields.risultato = row.risultato;
+      if (row.conforme && row.conforme.trim()) bFields.conforme = row.conforme;
       if (Object.keys(bFields).length) {
         items.push({ id: `b_${idx}`, fields: bFields });
       }
     });
   }
 
-  // Section C (Nutritional table parameter names, if customized)
+  // Section C (Nutritional table parameter names and values)
   if (Array.isArray(clone.c)) {
     clone.c.forEach((row, idx) => {
-      if (row.p) {
-        items.push({ id: `c_${idx}`, fields: { p: row.p } });
+      const cFields = {};
+      if (row.p && row.p.trim()) cFields.p = row.p;
+      if (row.v && row.v.trim()) cFields.v = row.v;
+      if (Object.keys(cFields).length) {
+        items.push({ id: `c_${idx}`, fields: cFields });
       }
     });
   }
@@ -315,12 +329,39 @@ async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en')
     }
   }
 
+  // Logistics
+  if (clone.log) {
+    const logFields = {};
+    if (clone.log.uvc) {
+      ['ean', 'l', 'p', 'h', 'pesoNetto', 'pesoSgocc', 'tara', 'pesoLordo'].forEach(f => {
+        if (clone.log.uvc[f] && clone.log.uvc[f].trim()) logFields[`uvc_${f}`] = clone.log.uvc[f];
+      });
+    }
+    if (clone.log.box) {
+      ['itf', 'l', 'p', 'h', 'tara', 'pesoLordo', 'pz'].forEach(f => {
+        if (clone.log.box[f] && clone.log.box[f].trim()) logFields[`box_${f}`] = clone.log.box[f];
+      });
+    }
+    if (clone.log.pallet) {
+      ['tipo', 'alt', 'pesoTot', 'cLayer', 'layers', 'totC'].forEach(f => {
+        if (clone.log.pallet[f] && clone.log.pallet[f].trim()) logFields[`pallet_${f}`] = clone.log.pallet[f];
+      });
+    }
+    if (Object.keys(logFields).length) {
+      items.push({ id: 'log', fields: logFields });
+    }
+  }
+
   if (!items.length) return clone;
 
   const result = await translateBatch(items, sourceLang, targetLang);
 
   // Apply translations back to clone
   if (result.master?.nome) clone.master.nome = result.master.nome;
+
+  if (result.header && clone.header) {
+    Object.assign(clone.header, result.header);
+  }
 
   if (result.section_a && clone.a) {
     Object.assign(clone.a, result.section_a);
@@ -334,7 +375,7 @@ async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en')
 
   if (Array.isArray(clone.c)) {
     clone.c.forEach((row, idx) => {
-      if (result[`c_${idx}`]?.p) row.p = result[`c_${idx}`].p;
+      if (result[`c_${idx}`]) Object.assign(row, result[`c_${idx}`]);
     });
   }
 
@@ -350,6 +391,18 @@ async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en')
 
   if (result.section_g && clone.g) {
     Object.assign(clone.g, result.section_g);
+  }
+
+  if (result.log && clone.log) {
+    ['uvc', 'box', 'pallet'].forEach((area) => {
+      if (clone.log[area]) {
+        Object.keys(clone.log[area]).forEach(f => {
+          if (result.log[`${area}_${f}`] !== undefined) {
+            clone.log[area][f] = result.log[`${area}_${f}`];
+          }
+        });
+      }
+    });
   }
 
   return clone;
@@ -429,9 +482,59 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
     }
   }
 
+  // Anagrafica
+  if (clone.anagrafica) {
+    const anaFields = {};
+    ['rs', 'piva', 'sede', 'citta', 'provincia', 'cap', 'nazione'].forEach((f) => {
+      if (clone.anagrafica[f] && clone.anagrafica[f].trim()) anaFields[f] = clone.anagrafica[f];
+    });
+    if (Object.keys(anaFields).length) {
+      items.push({ id: 'anagrafica', fields: anaFields });
+    }
+  }
+
+  // Contatti
+  if (clone.contatti) {
+    Object.entries(clone.contatti).forEach(([dept, data]) => {
+      const cFields = {};
+      ['nome', 'email', 'tel'].forEach((f) => {
+        if (data[f] && data[f].trim()) cFields[f] = data[f];
+      });
+      if (Object.keys(cFields).length) {
+        items.push({ id: `contatto_${dept}`, fields: cFields });
+      }
+    });
+  }
+
+  // Certificazioni
+  if (Array.isArray(clone.certificazioni)) {
+    clone.certificazioni.forEach((c, idx) => {
+      if (c.type && c.type.trim()) {
+        items.push({ id: `cert_${idx}`, fields: { type: c.type } });
+      }
+    });
+  }
+
+  // HACCP
+  if (clone.haccp) {
+    ['manualExtract', 'flowChart', 'prp', 'oprpCcp'].forEach((key) => {
+      if (Array.isArray(clone.haccp[key])) {
+        clone.haccp[key].forEach((file, idx) => {
+          if (file.appliesTo && file.appliesTo.trim()) {
+            items.push({ id: `haccp_${key}_${idx}`, fields: { appliesTo: file.appliesTo } });
+          }
+        });
+      }
+    });
+  }
+
   // PDF Place
   if (clone.pdfPlace && clone.pdfPlace.trim()) {
     items.push({ id: 'pdf_place', fields: { pdfPlace: clone.pdfPlace } });
+  }
+
+  if (clone.impegnoSchede?.place && clone.impegnoSchede.place.trim()) {
+    items.push({ id: 'impegno_place', fields: { place: clone.impegnoSchede.place } });
   }
 
   if (!items.length) return clone;
@@ -480,8 +583,44 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
     }
   }
 
+  if (clone.anagrafica && result.anagrafica) {
+    Object.assign(clone.anagrafica, result.anagrafica);
+  }
+
+  if (clone.contatti) {
+    Object.keys(clone.contatti).forEach((dept) => {
+      if (result[`contatto_${dept}`]) {
+        Object.assign(clone.contatti[dept], result[`contatto_${dept}`]);
+      }
+    });
+  }
+
+  if (Array.isArray(clone.certificazioni)) {
+    clone.certificazioni.forEach((c, idx) => {
+      if (result[`cert_${idx}`]?.type !== undefined) {
+        c.type = result[`cert_${idx}`].type;
+      }
+    });
+  }
+
+  if (clone.haccp) {
+    ['manualExtract', 'flowChart', 'prp', 'oprpCcp'].forEach((key) => {
+      if (Array.isArray(clone.haccp[key])) {
+        clone.haccp[key].forEach((file, idx) => {
+          if (result[`haccp_${key}_${idx}`]?.appliesTo !== undefined) {
+            file.appliesTo = result[`haccp_${key}_${idx}`].appliesTo;
+          }
+        });
+      }
+    });
+  }
+
   if (result.pdf_place?.pdfPlace) {
     clone.pdfPlace = result.pdf_place.pdfPlace;
+  }
+
+  if (result.impegno_place?.place && clone.impegnoSchede) {
+    clone.impegnoSchede.place = result.impegno_place.place;
   }
 
   return clone;

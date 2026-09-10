@@ -253,7 +253,11 @@ export default {
   // Lettera impegno
   impegnoTitle: "Lettera Impegno Schede Tecniche",
   impegnoDesc: "Genera, fai firmare e ricarica il documento di impegno per l'aggiornamento continuo delle schede tecniche.",
-  downloadImpegno: "Genera PDF Impegno",
+  impegnoStep1: "1. Genera Documento",
+  impegnoStep2: "2. Carica Documento Firmato",
+  downloadBtn: "Scarica",
+  removeBtn: "Rimuovi",
+  cancel: "Annulla",
   uploadImpegno: "Carica PDF Firmato",
   impObj: "Oggetto: Impegno di aggiornamento e validità delle schede tecniche",
   impSubj: "Il/La sottoscritto/a, in qualità di legale rappresentante o soggetto autorizzato per conto della società:",

@@ -1,10 +1,12 @@
 import React from "react";
 import { useModal } from "../hooks/useModal";
+import { useLanguage } from "../hooks/useLanguage";
 
 // Sostituisce alert()/confirm()/prompt() nativi (bloccati in alcuni contesti embedded)
 // con un dialog personalizzato, coerente con lo stile del resto dell'app.
 export default function ModalHost() {
   const { modal, setInputValue } = useModal();
+  const { t } = useLanguage();
 
   if (!modal.isOpen) return null;
 
@@ -30,7 +32,7 @@ export default function ModalHost() {
               onClick={modal.onCancel}
               className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors uppercase text-xs tracking-widest"
             >
-              Annulla
+              {t("cancel")}
             </button>
           )}
           <button

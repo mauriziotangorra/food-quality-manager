@@ -183,10 +183,41 @@ export default function QualificationPage({ onLogout }) {
         ),
       } : qualData.fileA,
 
-      // Anagrafica (Company details), Contatti (Contacts), Certificazioni ALWAYS come directly from qualData
-      anagrafica: qualData.anagrafica,
-      contatti: qualData.contatti,
-      certificazioni: qualData.certificazioni,
+      // Anagrafica (Company details)
+      anagrafica: tr.anagrafica ? { ...qualData.anagrafica, ...tr.anagrafica } : qualData.anagrafica,
+      
+      // Contatti (Contacts)
+      contatti: tr.contatti ? Object.fromEntries(
+        Object.entries(qualData.contatti || {}).map(([dept, data]) => [
+          dept,
+          tr.contatti[dept] ? { ...data, ...tr.contatti[dept] } : data
+        ])
+      ) : qualData.contatti,
+      
+      // Certificazioni
+      certificazioni: (tr.certificazioni && Array.isArray(qualData.certificazioni)) 
+        ? qualData.certificazioni.map((c, i) => (tr.certificazioni[i]?.type !== undefined ? { ...c, type: tr.certificazioni[i].type } : c))
+        : qualData.certificazioni,
+        
+      // HACCP
+      haccp: tr.haccp ? {
+        ...qualData.haccp,
+        ...Object.fromEntries(
+          ['manualExtract', 'flowChart', 'prp', 'oprpCcp'].map((key) => [
+            key,
+            Array.isArray(qualData.haccp?.[key]) ? qualData.haccp[key].map((f, i) => (
+              tr.haccp[key]?.[i]?.appliesTo !== undefined ? { ...f, appliesTo: tr.haccp[key][i].appliesTo } : f
+            )) : []
+          ])
+        )
+      } : qualData.haccp,
+      
+      // Impegno Schede
+      impegnoSchede: tr.impegnoSchede?.place ? {
+        ...qualData.impegnoSchede,
+        place: tr.impegnoSchede.place
+      } : qualData.impegnoSchede,
+
       pdfPlace: tr.pdfPlace || qualData.pdfPlace,
       pdfDate: qualData.pdfDate,
     };
