@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { CheckCircle2, ArrowLeft, UploadCloud, Languages } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from "../hooks/useAuth";
@@ -74,12 +74,17 @@ export default function QualificationPage({ onLogout }) {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Mappa del qualData tradotto on-demand per lingua ({ en: {...}, fr: {...}, ... })
+  // Mappa del qualData tradotto on-demand per lingua ({ en: {...}, fr: {...}, es: {...} })
   const [translatedQualMap, setTranslatedQualMap] = useState({});
   const [isTranslatingQual, setIsTranslatingQual] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
 
   const isTestUser = supplier?.name?.toUpperCase() === "TEST" || supplier?.name?.toUpperCase() === "DEMO";
+
+  // Reset showOriginal to false when language switches
+  useEffect(() => {
+    setShowOriginal(false);
+  }, [lang]);
 
   // Quando la lingua corrente non è 'it', carica qualData tradotto per la lingua selezionata
   useEffect(() => {
@@ -92,6 +97,7 @@ export default function QualificationPage({ onLogout }) {
       targetLang: lang,
       sourceLang: 'auto',
       scope: 'qual',
+      qualData: qualData,
     })
       .then((res) => {
         if (isMounted && res.qualData) {
@@ -104,11 +110,87 @@ export default function QualificationPage({ onLogout }) {
       });
 
     return () => { isMounted = false; };
-  }, [lang, supplier?.id]);
+  }, [lang, supplier?.id, translatedQualMap, qualData]);
 
-  const activeQualData = (!showOriginal && lang !== 'it' && translatedQualMap[lang])
-    ? translatedQualMap[lang]
-    : qualData;
+
+  // Merge live editable data with AI translation:
+  // - Company Details, Contacts, Certifications are ALWAYS live from qualData
+  // - Questionnaire answers keep radio selections and files, but show translated notes
+  // - Products, raw materials, food fraud show translated texts
+  // - Toggling showOriginal instantly returns raw qualData
+  const displayQualData = useMemo(() => {
+    if (showOriginal || lang === 'it' || !translatedQualMap[lang]) {
+      return qualData;
+    }
+
+    const tr = translatedQualMap[lang];
+
+    return {
+      ...qualData,
+
+      // File D: Questionnaire answers & notes (keep answer enum "Sì"/"No"/"N/A" and files intact, use translated notes)
+      fileD: {
+        ...qualData.fileD,
+        answers: Object.fromEntries(
+          Object.entries(qualData.fileD?.answers || {}).map(([qId, ans]) => {
+            const trAns = tr.fileD?.answers?.[qId];
+            return [
+              qId,
+              {
+                ...ans,
+                notes: (trAns?.notes !== undefined && trAns.notes !== null && trAns.notes !== '')
+                  ? trAns.notes
+                  : ans.notes,
+              },
+            ];
+          })
+        ),
+      },
+
+      // File C: Products
+      fileC: (Array.isArray(tr.fileC) && tr.fileC.length) ? tr.fileC : qualData.fileC,
+
+      // Raw Materials
+      rawMaterials: (Array.isArray(tr.rawMaterials) && tr.rawMaterials.length) ? tr.rawMaterials : qualData.rawMaterials,
+
+      // Food Fraud & Defense
+      foodFraudDefense: tr.foodFraudDefense ? {
+        ...qualData.foodFraudDefense,
+        foodFraud: {
+          ...(qualData.foodFraudDefense?.foodFraud || {}),
+          appliesTo: tr.foodFraudDefense.foodFraud?.appliesTo ?? qualData.foodFraudDefense?.foodFraud?.appliesTo,
+        },
+        foodDefense: {
+          ...(qualData.foodFraudDefense?.foodDefense || {}),
+          appliesTo: tr.foodFraudDefense.foodDefense?.appliesTo ?? qualData.foodFraudDefense?.foodDefense?.appliesTo,
+        },
+      } : qualData.foodFraudDefense,
+
+      // File A: Allergens note
+      fileA: tr.fileA ? {
+        ...qualData.fileA,
+        allergens: Object.fromEntries(
+          Object.entries(qualData.fileA?.allergens || {}).map(([allId, row]) => {
+            const trRow = tr.fileA?.allergens?.[allId];
+            return [
+              allId,
+              {
+                ...row,
+                note: (trRow?.note !== undefined && trRow.note !== null) ? trRow.note : row.note,
+              },
+            ];
+          })
+        ),
+      } : qualData.fileA,
+
+      // Anagrafica (Company details), Contatti (Contacts), Certificazioni ALWAYS come directly from qualData
+      anagrafica: qualData.anagrafica,
+      contatti: qualData.contatti,
+      certificazioni: qualData.certificazioni,
+      pdfPlace: tr.pdfPlace || qualData.pdfPlace,
+      pdfDate: qualData.pdfDate,
+    };
+  }, [showOriginal, lang, translatedQualMap, qualData]);
 
   useEffect(() => {
     if (!supplier) return;
@@ -156,17 +238,28 @@ export default function QualificationPage({ onLogout }) {
     }
   };
 
-  // NB: la qualifica e le specifiche tecniche condividono lo stesso record lato
-  // server (PUT sovrascrive entrambi i campi): per non perdere productSpecs quando
-  // si salva da quest'area, li ricarichiamo prima di scrivere.
-  // NB: il controllo di completezza obbligatorio (Materie Prime, Food Fraud/
-  // Defense, HACCP) NON vive qui: bloccherebbe ogni salvataggio da qualunque
-  // tab (Anagrafica, Contatti, ecc.), dato che ogni "Save" passa da qui con
-  // l'intero qualData. Il controllo è invece nel pulsante "Save" di ciascuna
-  // delle tab interessate (vedi RawMaterialsTab/FoodFraudDefenseTab/HaccpTab),
-  // così blocca solo chi salva esplicitamente da lì.
   const handleSetQualData = (updater) => {
-    setQualData(updater);
+    setQualData((prevQual) => {
+      const nextQual = typeof updater === "function" ? updater(prevQual) : updater;
+
+      // Keep translatedQualMap in sync if user is editing in translated view so typing doesn't revert
+      if (!showOriginal && lang !== 'it') {
+        setTranslatedQualMap((prevMap) => {
+          const currentTr = prevMap[lang];
+          if (!currentTr) return prevMap;
+          const nextTr = typeof updater === "function" ? updater(currentTr) : updater;
+          return {
+            ...prevMap,
+            [lang]: nextTr,
+          };
+        });
+      } else {
+        // If editing in original language, clear translations so they are re-fetched when switching
+        setTranslatedQualMap({});
+      }
+
+      return nextQual;
+    });
   };
 
   const saveQualDataPreservingSpecs = async (newData) => {
@@ -181,7 +274,21 @@ export default function QualificationPage({ onLogout }) {
         lastUpdate: timestamp.toISOString(),
       });
       setLastSyncTime(timestamp.toLocaleString(lang));
-      setTranslatedQualMap({});
+
+      // Refresh translations in background if in non-Italian language
+      if (lang !== 'it') {
+        api.translateQualifications(supplier.id, {
+          targetLang: lang,
+          sourceLang: 'auto',
+          scope: 'qual',
+          qualData: dataToSave,
+        }).then((res) => {
+          if (res.qualData) {
+            setTranslatedQualMap((prev) => ({ ...prev, [lang]: res.qualData }));
+          }
+        }).catch((e) => console.warn('Background translation update failed:', e.message));
+      }
+
       return true;
     } catch (e) {
       showAlert(e.message || t("genericSaveError"));
@@ -199,8 +306,8 @@ export default function QualificationPage({ onLogout }) {
   const tabProps = {
     t,
     lang,
-    qualData, // Always pass live mutable qualData so all form tabs (Anagrafica, Contatti, etc.) are 100% editable
-    translatedQualData: activeQualData,
+    qualData: displayQualData,
+    rawQualData: qualData,
     showOriginal,
     setQualData: handleSetQualData,
     globalConfig,
@@ -254,8 +361,10 @@ export default function QualificationPage({ onLogout }) {
             </div>
             <button
               type="button"
+              id="see-original-toggle-btn"
               onClick={() => setShowOriginal((prev) => !prev)}
-              className="text-blue-700 underline font-black hover:text-blue-900 transition ml-4 shrink-0 cursor-pointer"
+              disabled={isTranslatingQual && !translatedQualMap[lang]}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ml-4"
             >
               {showOriginal ? t('viewTranslated') : t('viewOriginal')}
             </button>
