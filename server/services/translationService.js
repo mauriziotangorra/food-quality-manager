@@ -71,9 +71,16 @@ async function translateBatchViaGemini(items, sourceLang, targetLang) {
 
   const payload = Object.fromEntries(usable.map((it) => [it.id, it.fields]));
 
-  const prompt = `Translate the following JSON from ${LANG_NAMES[sourceLang] || sourceLang} to ${LANG_NAMES[targetLang] || targetLang}.
+  const targetLangName = LANG_NAMES[targetLang] || targetLang;
+  const sourceLangName = LANG_NAMES[sourceLang] || (sourceLang && sourceLang !== 'auto' ? sourceLang : null);
+  const fromClause = sourceLangName ? `from ${sourceLangName} ` : '';
+  const prompt = `Translate all text values in the following JSON ${fromClause}into ${targetLangName}.
 
-This is a batch of ${usable.length} separate items from a food-industry supplier-qualification / compliance form (declarations, quality parameters, questionnaire questions, allergen names) — each top-level key is an independent item id, translate each one's fields independently. Keep regulation codes, standard names and acronyms unchanged (e.g. "Reg. CE 178/2002", "HACCP", "ACCREDIA", "DPR 327/80", "BRCGS", "GMP") and translate only the surrounding language. Preserve line breaks and punctuation. Return a JSON object with the SAME top-level item-id keys and the SAME nested field keys as the input, containing only the translated values — never add, remove, or rename any key.
+The source text in the fields may be in any language (such as French, Italian, English, Spanish, or German) as entered by suppliers or system defaults.
+Translate every text value into ${targetLangName}. If a text value or field is already written in ${targetLangName}, keep it as is.
+This is a batch of ${usable.length} separate items from a food-industry supplier-qualification / compliance form (declarations, quality parameters, questionnaire questions, allergen names, free-text notes, raw materials).
+Keep regulation codes, standard names and acronyms unchanged (e.g. "Reg. CE 178/2002", "HACCP", "ACCREDIA", "DPR 327/80", "BRCGS", "GMP", units like "ufc/g", "< 4°C"). Preserve numbers, line breaks, and punctuation.
+Return a JSON object with the EXACT SAME top-level item-id keys and the EXACT SAME nested field keys as the input, containing only the translated values — never add, remove, or rename any key.
 
 INPUT:
 ${JSON.stringify(payload, null, 2)}`;
@@ -147,10 +154,14 @@ async function translateBatchViaCloudTranslate(items, sourceLang, targetLang) {
 
   let json;
   try {
+    const body = { q: texts, target: targetLang, format: 'text' };
+    if (sourceLang && sourceLang !== 'auto' && sourceLang !== targetLang) {
+      body.source = sourceLang;
+    }
     const res = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: texts, source: sourceLang, target: targetLang, format: 'text' }),
+      body: JSON.stringify(body),
     });
     json = await res.json().catch(() => null);
     if (!res.ok) {
@@ -180,7 +191,7 @@ async function translateBatchViaCloudTranslate(items, sourceLang, targetLang) {
 // quota esaurita (mai per altri errori) e Google Cloud Translation è
 // configurata, ripete lo stesso batch lì invece di far fallire tutto —
 // così una giornata di quota Gemini esaurita non blocca più le traduzioni.
-async function translateBatch(items, sourceLang, targetLang) {
+async function translateBatch(items, sourceLang = 'auto', targetLang = 'en') {
   if (isGeminiConfigured()) {
     try {
       return await translateBatchViaGemini(items, sourceLang, targetLang);
@@ -222,8 +233,9 @@ function planTranslation(langGroups) {
  * Translates an entire product spec object into the target language.
  * Leaves numeric values, codes, IDs, flags, and attachments untouched.
  */
-async function translateSpecObject(spec, sourceLang = 'it', targetLang = 'en') {
-  if (!spec || sourceLang === targetLang) return spec;
+async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en') {
+  if (!spec || !targetLang) return spec;
+  if (sourceLang !== 'auto' && sourceLang === targetLang) return spec;
   if (!isAiConfigured()) return spec;
 
   const clone = JSON.parse(JSON.stringify(spec));
@@ -346,32 +358,30 @@ async function translateSpecObject(spec, sourceLang = 'it', targetLang = 'en') {
 /**
  * Translates an entire qualData object into the target language.
  */
-async function translateQualDataObject(qualData, sourceLang = 'it', targetLang = 'en') {
-  if (!qualData || sourceLang === targetLang) return qualData;
+async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang = 'en') {
+  if (!qualData || !targetLang) return qualData;
+  if (sourceLang !== 'auto' && sourceLang === targetLang) return qualData;
   if (!isAiConfigured()) return qualData;
 
   const clone = JSON.parse(JSON.stringify(qualData));
   const items = [];
 
-  // File A: allergen custom notes
+  // File A: allergen custom notes (keep presenza & tracce enum stable)
   if (clone.fileA?.allergens) {
     Object.entries(clone.fileA.allergens).forEach(([allId, row]) => {
       const allFields = {};
-      if (row.note) allFields.note = row.note;
-      if (row.presenza) allFields.presenza = row.presenza;
-      if (row.tracce) allFields.tracce = row.tracce;
+      if (row.note && row.note.trim()) allFields.note = row.note;
       if (Object.keys(allFields).length) {
         items.push({ id: `allergen_${allId}`, fields: allFields });
       }
     });
   }
 
-  // File D: questionnaire answers & notes
+  // File D: questionnaire answers & notes (keep answer enum "Sì"/"No"/"N/A" stable, translate free-text notes)
   if (clone.fileD?.answers) {
     Object.entries(clone.fileD.answers).forEach(([qId, ans]) => {
       const qFields = {};
-      if (ans.notes) qFields.notes = ans.notes;
-      if (ans.answer) qFields.answer = ans.answer;
+      if (ans.notes && ans.notes.trim()) qFields.notes = ans.notes;
       if (Object.keys(qFields).length) {
         items.push({ id: `question_${qId}`, fields: qFields });
       }
@@ -419,6 +429,11 @@ async function translateQualDataObject(qualData, sourceLang = 'it', targetLang =
     }
   }
 
+  // PDF Place
+  if (clone.pdfPlace && clone.pdfPlace.trim()) {
+    items.push({ id: 'pdf_place', fields: { pdfPlace: clone.pdfPlace } });
+  }
+
   if (!items.length) return clone;
 
   const result = await translateBatch(items, sourceLang, targetLang);
@@ -426,16 +441,16 @@ async function translateQualDataObject(qualData, sourceLang = 'it', targetLang =
   // Apply translations back to clone
   if (clone.fileA?.allergens) {
     Object.entries(clone.fileA.allergens).forEach(([allId, row]) => {
-      if (result[`allergen_${allId}`]) {
-        Object.assign(row, result[`allergen_${allId}`]);
+      if (result[`allergen_${allId}`]?.note !== undefined) {
+        row.note = result[`allergen_${allId}`].note;
       }
     });
   }
 
   if (clone.fileD?.answers) {
     Object.entries(clone.fileD.answers).forEach(([qId, ans]) => {
-      if (result[`question_${qId}`]) {
-        Object.assign(ans, result[`question_${qId}`]);
+      if (result[`question_${qId}`]?.notes !== undefined) {
+        ans.notes = result[`question_${qId}`].notes;
       }
     });
   }
@@ -463,6 +478,10 @@ async function translateQualDataObject(qualData, sourceLang = 'it', targetLang =
     if (result.food_fraud_defense.foodDefenseAppliesTo && clone.foodFraudDefense.foodDefense) {
       clone.foodFraudDefense.foodDefense.appliesTo = result.food_fraud_defense.foodDefenseAppliesTo;
     }
+  }
+
+  if (result.pdf_place?.pdfPlace) {
+    clone.pdfPlace = result.pdf_place.pdfPlace;
   }
 
   return clone;

@@ -149,6 +149,7 @@ export default function TechnicalPage({ onLogout }) {
   // Mappa delle specifiche tradotte on-demand per lingua ({ en: [...specs], fr: [...specs], ... })
   const [translatedSpecsMap, setTranslatedSpecsMap] = useState({});
   const [isTranslatingSpecs, setIsTranslatingSpecs] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   const isTestUser = supplier?.name?.toUpperCase() === "TEST" || supplier?.name?.toUpperCase() === "DEMO";
 
@@ -161,6 +162,7 @@ export default function TechnicalPage({ onLogout }) {
     setIsTranslatingSpecs(true);
     api.translateQualifications(supplier.id, {
       targetLang: lang,
+      sourceLang: 'auto',
       scope: 'specs',
       specs: productSpecs,
     })
@@ -177,7 +179,7 @@ export default function TechnicalPage({ onLogout }) {
     return () => { isMounted = false; };
   }, [lang, supplier?.id, productSpecs]);
 
-  const activeSpecs = (lang !== 'it' && translatedSpecsMap[lang]) ? translatedSpecsMap[lang] : productSpecs;
+  const activeSpecs = (!showOriginal && lang !== 'it' && translatedSpecsMap[lang]) ? translatedSpecsMap[lang] : productSpecs;
 
   useEffect(() => {
     if (!supplier) return;
@@ -548,14 +550,15 @@ export default function TechnicalPage({ onLogout }) {
     let specToExport = spec;
     let qualToExport = qualData;
 
-    if (lang && lang.toLowerCase() !== 'it') {
+    if (lang) {
       const found = activeSpecs.find((s) => s.id === spec.id);
-      if (found) {
+      if (found && !showOriginal) {
         specToExport = found;
       } else {
         try {
           const res = await api.translateQualifications(supplier.id, {
             targetLang: lang,
+            sourceLang: 'auto',
             scope: 'all',
             specs: [spec],
             qualData,
@@ -664,14 +667,17 @@ export default function TechnicalPage({ onLogout }) {
               <span>
                 {isTranslatingSpecs
                   ? t('translatingContent').replace('{lang}', lang.toUpperCase())
-                  : t('autoTranslatedBanner').replace('{lang}', lang.toUpperCase())}
+                  : (showOriginal
+                      ? t('viewingOriginalBanner')
+                      : t('autoTranslatedBanner').replace('{lang}', lang.toUpperCase()))}
               </span>
             </div>
             <button
-              onClick={() => setLang('it')}
-              className="text-blue-700 underline font-black hover:text-blue-900 transition ml-4 shrink-0"
+              type="button"
+              onClick={() => setShowOriginal((prev) => !prev)}
+              className="text-blue-700 underline font-black hover:text-blue-900 transition ml-4 shrink-0 cursor-pointer"
             >
-              {t('viewOriginal')}
+              {showOriginal ? t('viewTranslated') : t('viewOriginal')}
             </button>
           </div>
         )}

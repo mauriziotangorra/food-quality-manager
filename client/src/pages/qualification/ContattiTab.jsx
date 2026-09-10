@@ -13,11 +13,15 @@ const DEPT_LABEL_KEYS = {
 
 export default function ContattiTab({ t, qualData, setQualData, saveImmediate }) {
   const { showAlert } = useModal();
+  const contatti = qualData?.contatti || {};
 
   const update = (dept, field, value) => {
     setQualData((prev) => ({
       ...prev,
-      contatti: { ...prev.contatti, [dept]: { ...prev.contatti[dept], [field]: value } },
+      contatti: {
+        ...(prev?.contatti || {}),
+        [dept]: { ...((prev?.contatti || {})[dept] || {}), [field]: value },
+      },
     }));
   };
 
@@ -29,17 +33,18 @@ export default function ContattiTab({ t, qualData, setQualData, saveImmediate })
           <h3 className="text-5xl font-black uppercase tracking-tighter text-slate-900">{t("tabContatti")}</h3>
         </div>
         <button
+          type="button"
           onClick={async () => {
             const ok = await saveImmediate(qualData);
             if (ok) showAlert(t("alertSaved"));
           }}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer"
         >
           <Save size={16} /> {t("save")}
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-slate-900">
-        {Object.entries(qualData.contatti).map(([dept, data]) => (
+        {Object.entries(contatti).map(([dept, data]) => (
           <div key={dept} className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200 shadow-inner">
             <h4 className="text-xl font-black uppercase mb-6 text-slate-700">{t(DEPT_LABEL_KEYS[dept] || dept)}</h4>
             <div className="space-y-4">

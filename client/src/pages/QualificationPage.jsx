@@ -77,20 +77,21 @@ export default function QualificationPage({ onLogout }) {
   // Mappa del qualData tradotto on-demand per lingua ({ en: {...}, fr: {...}, ... })
   const [translatedQualMap, setTranslatedQualMap] = useState({});
   const [isTranslatingQual, setIsTranslatingQual] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   const isTestUser = supplier?.name?.toUpperCase() === "TEST" || supplier?.name?.toUpperCase() === "DEMO";
 
-  // Quando la lingua corrente non è 'it', traduce qualData con caching automatico
+  // Quando la lingua corrente non è 'it', carica qualData tradotto per la lingua selezionata
   useEffect(() => {
-    if (!supplier || !qualData || lang === 'it') return;
+    if (!supplier || lang === 'it') return;
     if (translatedQualMap[lang]) return;
 
     let isMounted = true;
     setIsTranslatingQual(true);
     api.translateQualifications(supplier.id, {
       targetLang: lang,
+      sourceLang: 'auto',
       scope: 'qual',
-      qualData,
     })
       .then((res) => {
         if (isMounted && res.qualData) {
@@ -103,9 +104,11 @@ export default function QualificationPage({ onLogout }) {
       });
 
     return () => { isMounted = false; };
-  }, [lang, supplier?.id, qualData]);
+  }, [lang, supplier?.id]);
 
-  const activeQualData = (lang !== 'it' && translatedQualMap[lang]) ? translatedQualMap[lang] : qualData;
+  const activeQualData = (!showOriginal && lang !== 'it' && translatedQualMap[lang])
+    ? translatedQualMap[lang]
+    : qualData;
 
   useEffect(() => {
     if (!supplier) return;
@@ -162,17 +165,23 @@ export default function QualificationPage({ onLogout }) {
   // l'intero qualData. Il controllo è invece nel pulsante "Save" di ciascuna
   // delle tab interessate (vedi RawMaterialsTab/FoodFraudDefenseTab/HaccpTab),
   // così blocca solo chi salva esplicitamente da lì.
+  const handleSetQualData = (updater) => {
+    setQualData(updater);
+  };
+
   const saveQualDataPreservingSpecs = async (newData) => {
     if (!supplier) return false;
     try {
+      const dataToSave = newData || qualData;
       const current = await api.getQualifications(supplier.id);
       const timestamp = new Date();
       await api.saveQualifications(supplier.id, {
-        qualData: newData,
+        qualData: dataToSave,
         productSpecs: current.productSpecs || [],
         lastUpdate: timestamp.toISOString(),
       });
       setLastSyncTime(timestamp.toLocaleString(lang));
+      setTranslatedQualMap({});
       return true;
     } catch (e) {
       showAlert(e.message || t("genericSaveError"));
@@ -190,8 +199,10 @@ export default function QualificationPage({ onLogout }) {
   const tabProps = {
     t,
     lang,
-    qualData: activeQualData,
-    setQualData,
+    qualData, // Always pass live mutable qualData so all form tabs (Anagrafica, Contatti, etc.) are 100% editable
+    translatedQualData: activeQualData,
+    showOriginal,
+    setQualData: handleSetQualData,
     globalConfig,
     setGlobalConfig,
     masterLogo,
@@ -236,14 +247,17 @@ export default function QualificationPage({ onLogout }) {
               <span>
                 {isTranslatingQual
                   ? t('translatingContent').replace('{lang}', lang.toUpperCase())
-                  : t('autoTranslatedBanner').replace('{lang}', lang.toUpperCase())}
+                  : (showOriginal
+                      ? t('viewingOriginalBanner')
+                      : t('autoTranslatedBanner').replace('{lang}', lang.toUpperCase()))}
               </span>
             </div>
             <button
-              onClick={() => setLang('it')}
-              className="text-blue-700 underline font-black hover:text-blue-900 transition ml-4 shrink-0"
+              type="button"
+              onClick={() => setShowOriginal((prev) => !prev)}
+              className="text-blue-700 underline font-black hover:text-blue-900 transition ml-4 shrink-0 cursor-pointer"
             >
-              {t('viewOriginal')}
+              {showOriginal ? t('viewTranslated') : t('viewOriginal')}
             </button>
           </div>
         )}

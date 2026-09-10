@@ -505,6 +505,9 @@ export default {
   product: "Product",
   translationDisclaimer: "Document automatically translated for consultation purposes. The original text submitted by the supplier prevails for legal and regulatory purposes.",
   autoTranslatedBanner: "You are viewing the version automatically translated into {lang}.",
+  viewingOriginalBanner: "You are viewing the original entered content.",
   translatingContent: "Translating content ({lang})...",
-  viewOriginal: "Show original (IT)"
+  viewOriginal: "Show original",
+  viewTranslated: "Show translated",
+  generatingPdf: "Translating and generating PDF..."
 };
