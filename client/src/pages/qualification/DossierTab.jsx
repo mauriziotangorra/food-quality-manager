@@ -1,21 +1,27 @@
-import React from "react";
-import { FileSearch, Download } from "lucide-react";
+import React, { useState } from "react";
+import { FileSearch, Download, Loader2 } from "lucide-react";
 import { generateQualificationDossierPDF } from "../../utils/pdfTemplates";
 import { api } from "../../services/api";
 
 export default function DossierTab({ t, lang, qualData, setQualData, globalConfig, masterLogo, supplierId, supplierName, saveImmediate }) {
-  const handleGenerate = async () => {
-    let qualToExport = qualData;
-    if (lang && lang.toLowerCase() !== 'it' && supplierId) {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async (freshData) => {
+    let qualToExport = freshData || qualData;
+    if (supplierId) {
+      setIsGenerating(true);
       try {
         const res = await api.translateQualifications(supplierId, {
           targetLang: lang,
+          sourceLang: 'auto',
           scope: 'qual',
-          qualData,
+          qualData: qualToExport,
         });
         if (res.qualData) qualToExport = res.qualData;
       } catch (e) {
         console.warn('Dossier translation error before PDF export:', e.message);
+      } finally {
+        setIsGenerating(false);
       }
     }
     generateQualificationDossierPDF({ qualData: qualToExport, supplierName, globalConfig, lang, t, masterLogoUrl: masterLogo });
@@ -69,13 +75,26 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
             <p className="text-xl font-black uppercase tracking-tighter text-emerald-900">{qualData.anagrafica.rs || supplierName}</p>
           </section>
           <button
+            type="button"
+            disabled={isGenerating}
             onClick={async () => {
               await saveImmediate(qualData);
-              await handleGenerate();
+              await handleGenerate(qualData);
             }}
-            className="bg-slate-900 text-white px-20 py-8 rounded-[2rem] font-black text-2xl uppercase tracking-tighter hover:bg-emerald-600 transition-all shadow-2xl flex items-center gap-6 mx-auto"
+            className={`bg-slate-900 text-white px-20 py-8 rounded-[2rem] font-black text-2xl uppercase tracking-tighter transition-all shadow-2xl flex items-center gap-6 mx-auto ${
+              isGenerating ? "opacity-75 cursor-wait" : "hover:bg-emerald-600 cursor-pointer"
+            }`}
           >
-            <Download size={40} strokeWidth={3} /> {t("downloadOfficialPdf")}
+            {isGenerating ? (
+              <>
+                <Loader2 size={40} strokeWidth={3} className="animate-spin text-emerald-400" />
+                <span className="text-xl">{t("generatingPdf")}</span>
+              </>
+            ) : (
+              <>
+                <Download size={40} strokeWidth={3} /> {t("downloadOfficialPdf")}
+              </>
+            )}
           </button>
         </div>
       </div>

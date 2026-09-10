@@ -6,9 +6,13 @@ const FIELDS = ["rs", "piva", "sede", "citta", "provincia", "cap", "nazione"];
 
 export default function AnagraficaTab({ t, qualData, setQualData, saveImmediate }) {
   const { showAlert } = useModal();
+  const anagrafica = qualData?.anagrafica || {};
 
   const update = (field, value) => {
-    setQualData((prev) => ({ ...prev, anagrafica: { ...prev.anagrafica, [field]: value } }));
+    setQualData((prev) => ({
+      ...prev,
+      anagrafica: { ...(prev?.anagrafica || {}), [field]: value },
+    }));
   };
 
   return (
@@ -19,11 +23,12 @@ export default function AnagraficaTab({ t, qualData, setQualData, saveImmediate 
           <h3 className="text-5xl font-black uppercase tracking-tighter">{t("tabAnagrafica")}</h3>
         </div>
         <button
+          type="button"
           onClick={async () => {
             const ok = await saveImmediate(qualData);
             if (ok) showAlert(t("alertSaved"));
           }}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer"
         >
           <Save size={16} /> {t("save")}
         </button>
@@ -35,9 +40,10 @@ export default function AnagraficaTab({ t, qualData, setQualData, saveImmediate 
             <label className="text-[10px] font-black uppercase tracking-widest ml-2">{t(f).toUpperCase()}</label>
             <input
               type="text"
-              className="w-full bg-slate-50 p-6 rounded-3xl border-none font-black shadow-inner outline-none focus:ring-2 ring-emerald-100"
-              value={qualData.anagrafica[f] || ""}
+              className="w-full bg-slate-50 p-6 rounded-3xl border border-slate-200 font-bold shadow-inner outline-none focus:ring-2 ring-emerald-500 focus:bg-white transition-all text-slate-900"
+              value={anagrafica[f] || ""}
               onChange={(e) => update(f, e.target.value)}
+              placeholder={t(f)}
             />
           </div>
         ))}

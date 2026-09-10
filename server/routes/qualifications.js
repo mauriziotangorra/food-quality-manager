@@ -110,13 +110,13 @@ router.post('/:supplierId/translate', requireOwnerOrAdmin, async (req, res) => {
     const { supplierId } = req.params;
     const {
       targetLang = 'en',
-      sourceLang = 'it',
+      sourceLang = 'auto',
       scope = 'all', // 'all' | 'specs' | 'qual'
       specs: clientSpecs,
       qualData: clientQualData,
     } = req.body || {};
 
-    if (!targetLang || targetLang === sourceLang) {
+    if (!targetLang) {
       return res.json({ ok: true, specs: clientSpecs, qualData: clientQualData, targetLang });
     }
 
