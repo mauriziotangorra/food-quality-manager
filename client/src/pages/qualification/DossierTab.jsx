@@ -1,29 +1,21 @@
 import React, { useState } from "react";
 import { FileSearch, Download, Loader2 } from "lucide-react";
 import { generateQualificationDossierPDF } from "../../utils/pdfTemplates";
-import { api } from "../../services/api";
 
-export default function DossierTab({ t, lang, qualData, setQualData, globalConfig, masterLogo, supplierId, supplierName, saveImmediate }) {
+export default function DossierTab({ t, lang, qualData, rawQualData, setQualData, globalConfig, masterLogo, supplierName, saveImmediate, getTranslatedQualData, showAlert }) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerate = async (freshData) => {
     let qualToExport = freshData || qualData;
-    if (supplierId) {
-      setIsGenerating(true);
-      try {
-        const res = await api.translateQualifications(supplierId, {
-          targetLang: lang,
-          sourceLang: 'auto',
-          scope: 'qual',
-          qualData: qualToExport,
-        });
-        if (res.qualData) qualToExport = res.qualData;
-      } catch (e) {
-        console.warn('Dossier translation error before PDF export:', e.message);
-      } finally {
-        setIsGenerating(false);
-      }
+    setIsGenerating(true);
+    try {
+      qualToExport = await getTranslatedQualData(qualToExport);
+    } catch (e) {
+      showAlert(e.message || t('translateMissingError'));
+      setIsGenerating(false);
+      return;
     }
+    setIsGenerating(false);
     generateQualificationDossierPDF({ qualData: qualToExport, supplierName, globalConfig, lang, t, masterLogoUrl: masterLogo });
   };
 
@@ -78,8 +70,9 @@ export default function DossierTab({ t, lang, qualData, setQualData, globalConfi
             type="button"
             disabled={isGenerating}
             onClick={async () => {
-              await saveImmediate(qualData);
-              await handleGenerate(qualData);
+              const saved = await saveImmediate(rawQualData);
+              if (!saved) return;
+              await handleGenerate(rawQualData);
             }}
             className={`bg-slate-900 text-white px-20 py-8 rounded-[2rem] font-black text-2xl uppercase tracking-tighter transition-all shadow-2xl flex items-center gap-6 mx-auto ${
               isGenerating ? "opacity-75 cursor-wait" : "hover:bg-emerald-600 cursor-pointer"

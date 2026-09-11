@@ -12,6 +12,7 @@ import CommitmentLetterCard from "./technical/CommitmentLetterCard";
 import HistoryModal from "./technical/HistoryModal";
 import SpecEditor from "./technical/SpecEditor";
 import AiSuggestionsModal from "./technical/AiSuggestionsModal";
+import TranslationShimmer from "../components/TranslationShimmer";
 
 // Import che hanno un mapping AI -> campi del form (vedi aiExtract sul
 // server): solo Foto Prodotto ("foto") resta un upload semplice, senza
@@ -88,6 +89,28 @@ function setPath(obj, path, val) {
   }
   target[parts[parts.length - 1]] = val;
   return copy;
+}
+
+function preserveSpecIdentity(source, translated) {
+  return {
+    ...translated,
+    master: {
+      ...translated.master,
+      nome: source.master?.nome,
+      codice: source.master?.codice,
+    },
+    header: source.header ? { ...source.header } : translated.header,
+    a: {
+      ...translated.a,
+      legalName: source.a?.legalName,
+      brand: source.a?.brand,
+      batchDecode: source.a?.batchDecode,
+      producedIn: source.a?.producedIn,
+      tmc: source.a?.tmc,
+      giorniGarantiti: source.a?.giorniGarantiti,
+      brandLogo: source.a?.brandLogo,
+    },
+  };
 }
 
 function buildNewSpec(t) {
@@ -196,7 +219,9 @@ export default function TechnicalPage({ onLogout }) {
     return () => { isMounted = false; };
   }, [lang, supplier?.id, productSpecs]);
 
-  const activeSpecs = (!showOriginal && lang !== 'it' && translatedSpecsMap[lang]) ? translatedSpecsMap[lang] : productSpecs;
+  const activeSpecs = (!showOriginal && lang !== 'it' && translatedSpecsMap[lang])
+    ? translatedSpecsMap[lang].map((spec, index) => preserveSpecIdentity(productSpecs[index] || {}, spec))
+    : productSpecs;
 
   useEffect(() => {
     if (!supplier) return;
@@ -706,6 +731,9 @@ export default function TechnicalPage({ onLogout }) {
           <div className="text-center text-slate-400 font-bold py-20">{t("loading")}</div>
         ) : (
           <div className="space-y-8">
+            {isTranslatingSpecs && !translatedSpecsMap[lang] && (
+              <TranslationShimmer label={t('translatingContent').replace('{lang}', lang.toUpperCase())} />
+            )}
             {activeSpecs
               .filter((s) => showObsolete || !s.isObsolete)
               .map((spec) => (
