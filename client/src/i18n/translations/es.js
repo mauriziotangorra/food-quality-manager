@@ -507,6 +507,8 @@ export default {
   autoTranslatedBanner: "Está viendo la versión traducida automáticamente en {lang}.",
   viewingOriginalBanner: "Está visualizando el contenido original introducido por el proveedor.",
   translatingContent: "Traduciendo contenido ({lang})...",
+  translationFailed: "Traducción no disponible. Se muestra el contenido original.",
+  retryTranslation: "Reintentar traducción",
   viewOriginal: "Mostrar original",
   viewTranslated: "Mostrar traducción",
   generatingPdf: "Traduciendo y generando PDF..."

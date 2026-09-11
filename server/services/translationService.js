@@ -443,7 +443,7 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
       ffdFields.foodFraudAppliesTo = clone.foodFraudDefense.foodFraud.appliesTo;
     }
     if (clone.foodFraudDefense.foodDefense?.appliesTo) {
-      ffdFields.foodDefenseAppliesTo = clone.foodDefense.foodDefense.appliesTo;
+      ffdFields.foodDefenseAppliesTo = clone.foodFraudDefense.foodDefense.appliesTo;
     }
     if (Object.keys(ffdFields).length) {
       items.push({ id: 'food_fraud_defense', fields: ffdFields });

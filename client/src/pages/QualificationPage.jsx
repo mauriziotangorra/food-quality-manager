@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { CheckCircle2, ArrowLeft, UploadCloud, Languages } from "lucide-react";
 import { useLanguage } from "../hooks/useLanguage";
 import { useAuth } from "../hooks/useAuth";
@@ -67,6 +67,7 @@ export default function QualificationPage({ onLogout }) {
   const { session } = useAuth();
   const { showAlert } = useModal();
   const supplier = session?.supplier;
+  const langCode = lang.toLowerCase();
 
   const [activeTab, setActiveTab] = useState("ANAGRAFICA");
   const [qualData, setQualData] = useState(EMPTY_QUAL_DATA);
@@ -77,8 +78,11 @@ export default function QualificationPage({ onLogout }) {
 
   // Mappa del qualData tradotto on-demand per lingua ({ en: {...}, fr: {...}, es: {...} })
   const [translatedQualMap, setTranslatedQualMap] = useState({});
+  const [translationStatus, setTranslationStatus] = useState({});
+  const [translationRetry, setTranslationRetry] = useState(0);
   const [isTranslatingQual, setIsTranslatingQual] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const translationRequestRef = useRef(0);
 
   const isTestUser = supplier?.name?.toUpperCase() === "TEST" || supplier?.name?.toUpperCase() === "DEMO";
 
@@ -89,29 +93,40 @@ export default function QualificationPage({ onLogout }) {
 
   // Quando la lingua corrente non è 'it', carica qualData tradotto per la lingua selezionata
   useEffect(() => {
-    if (!supplier || lang === 'it') return;
-    if (translatedQualMap[lang]) return;
+    // Wait for the database payload before translating. On a page refresh,
+    // translating EMPTY_QUAL_DATA first would cache an empty result and cause
+    // the real selected-language request to be skipped after the data loads.
+    if (!supplier || loading) return;
+    if (translatedQualMap[langCode] && translationStatus[langCode] !== 'error') return;
 
+    const requestId = ++translationRequestRef.current;
     let isMounted = true;
+    setTranslationStatus((prev) => ({ ...prev, [langCode]: 'loading' }));
     setIsTranslatingQual(true);
     api.translateQualifications(supplier.id, {
-      targetLang: lang,
+      targetLang: langCode,
       sourceLang: 'auto',
       scope: 'qual',
       qualData: qualData,
     })
       .then((res) => {
-        if (isMounted && res.qualData) {
-          setTranslatedQualMap((prev) => ({ ...prev, [lang]: res.qualData }));
+        if (isMounted && requestId === translationRequestRef.current && res.qualData) {
+          setTranslatedQualMap((prev) => ({ ...prev, [langCode]: res.qualData }));
+          setTranslationStatus((prev) => ({ ...prev, [langCode]: 'success' }));
         }
       })
-      .catch((err) => console.warn('Auto-translate qualData failed:', err.message))
+      .catch((err) => {
+        console.warn('Auto-translate qualData failed:', err.message);
+        if (isMounted && requestId === translationRequestRef.current) {
+          setTranslationStatus((prev) => ({ ...prev, [langCode]: 'error' }));
+        }
+      })
       .finally(() => {
-        if (isMounted) setIsTranslatingQual(false);
+        if (isMounted && requestId === translationRequestRef.current) setIsTranslatingQual(false);
       });
 
     return () => { isMounted = false; };
-  }, [lang, supplier?.id, translatedQualMap, qualData]);
+  }, [langCode, supplier?.id, translatedQualMap, qualData, translationRetry, loading]);
 
 
   // Merge live editable data with AI translation:
@@ -120,11 +135,11 @@ export default function QualificationPage({ onLogout }) {
   // - Products, raw materials, food fraud show translated texts
   // - Toggling showOriginal instantly returns raw qualData
   const displayQualData = useMemo(() => {
-    if (showOriginal || lang === 'it' || !translatedQualMap[lang]) {
+    if (showOriginal || !translatedQualMap[langCode]) {
       return qualData;
     }
 
-    const tr = translatedQualMap[lang];
+    const tr = translatedQualMap[langCode];
 
     return {
       ...qualData,
@@ -165,11 +180,11 @@ export default function QualificationPage({ onLogout }) {
         ...qualData.foodFraudDefense,
         foodFraud: {
           ...(qualData.foodFraudDefense?.foodFraud || {}),
-          appliesTo: tr.foodFraudDefense.foodFraud?.appliesTo ?? qualData.foodFraudDefense?.foodFraud?.appliesTo,
+          appliesTo: tr.foodFraudDefense?.foodFraud?.appliesTo ?? qualData.foodFraudDefense?.foodFraud?.appliesTo,
         },
         foodDefense: {
           ...(qualData.foodFraudDefense?.foodDefense || {}),
-          appliesTo: tr.foodFraudDefense.foodDefense?.appliesTo ?? qualData.foodFraudDefense?.foodDefense?.appliesTo,
+          appliesTo: tr.foodFraudDefense?.foodDefense?.appliesTo ?? qualData.foodFraudDefense?.foodDefense?.appliesTo,
         },
       } : qualData.foodFraudDefense,
 
@@ -214,7 +229,7 @@ export default function QualificationPage({ onLogout }) {
       pdfPlace: qualData.pdfPlace,
       pdfDate: qualData.pdfDate,
     };
-  }, [showOriginal, lang, translatedQualMap, qualData]);
+  }, [showOriginal, langCode, translatedQualMap, qualData]);
 
   useEffect(() => {
     if (!supplier) return;
@@ -237,7 +252,7 @@ export default function QualificationPage({ onLogout }) {
             haccp: { ...prev.haccp, ...(qData.qualData.haccp || {}) },
           }));
         }
-        if (qData.lastUpdate) setLastSyncTime(new Date(qData.lastUpdate).toLocaleString(lang));
+        if (qData.lastUpdate) setLastSyncTime(new Date(qData.lastUpdate).toLocaleString(langCode));
         setMasterLogo(settingsData?.settings?.logo || '/logo.png');
         setGlobalConfig({
           allergeni: settingsData?.settings?.templates?.allergeni || [],
@@ -256,7 +271,7 @@ export default function QualificationPage({ onLogout }) {
     try {
       const timestamp = new Date();
       await api.saveQualifications(supplier.id, { qualData: newData || qualData, productSpecs: undefined, lastUpdate: timestamp.toISOString() });
-      setLastSyncTime(timestamp.toLocaleString(lang));
+      setLastSyncTime(timestamp.toLocaleString(langCode));
     } catch (e) {
       showAlert(e.message || t("genericSaveError"));
     }
@@ -267,12 +282,12 @@ export default function QualificationPage({ onLogout }) {
       const nextQual = typeof updater === "function" ? updater(prevQual) : updater;
 
       // Keep translatedQualMap in sync if user is editing in translated view so typing doesn't revert
-      if (!showOriginal && lang !== 'it') {
+      if (!showOriginal && langCode !== 'it') {
         setTranslatedQualMap((prevMap) => {
-          const currentTr = prevMap[lang];
+          const currentTr = prevMap[langCode];
           if (!currentTr) return {};
           const nextTr = typeof updater === "function" ? updater(currentTr) : updater;
-          return { [lang]: nextTr };
+          return { [langCode]: nextTr };
         });
       } else {
         // If editing in original language, clear translations so they are re-fetched when switching
@@ -294,18 +309,18 @@ export default function QualificationPage({ onLogout }) {
         productSpecs: current.productSpecs || [],
         lastUpdate: timestamp.toISOString(),
       });
-      setLastSyncTime(timestamp.toLocaleString(lang));
+      setLastSyncTime(timestamp.toLocaleString(langCode));
 
       // Refresh translations in background if in non-Italian language
-      if (lang !== 'it') {
+      if (langCode !== 'it') {
         api.translateQualifications(supplier.id, {
-          targetLang: lang,
+          targetLang: langCode,
           sourceLang: 'auto',
           scope: 'qual',
           qualData: dataToSave,
         }).then((res) => {
           if (res.qualData) {
-            setTranslatedQualMap((prev) => ({ ...prev, [lang]: res.qualData }));
+            setTranslatedQualMap((prev) => ({ ...prev, [langCode]: res.qualData }));
           }
         }).catch((e) => console.warn('Background translation update failed:', e.message));
       }
@@ -323,17 +338,16 @@ export default function QualificationPage({ onLogout }) {
   };
 
   const getTranslatedQualData = async (data) => {
-    if (lang === 'it') return data;
-    if (translatedQualMap[lang]) return translatedQualMap[lang];
+    if (translatedQualMap[langCode]) return translatedQualMap[langCode];
 
     const res = await api.translateQualifications(supplier.id, {
-      targetLang: lang,
+      targetLang: langCode,
       sourceLang: 'auto',
       scope: 'qual',
       qualData: data,
     });
     if (!res.qualData) throw new Error(t('translateMissingError'));
-    setTranslatedQualMap((prev) => ({ ...prev, [lang]: res.qualData }));
+    setTranslatedQualMap((prev) => ({ ...prev, [langCode]: res.qualData }));
     return res.qualData;
   };
 
@@ -385,27 +399,37 @@ export default function QualificationPage({ onLogout }) {
       </nav>
 
       <div className="max-w-7xl mx-auto p-4 md:p-12">
-        {lang !== 'it' && (
+        {langCode !== 'it' && (
           <div className="mb-6 p-4 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-between text-blue-900 text-xs font-bold shadow-sm">
             <div className="flex items-center gap-2.5">
               <Languages size={18} className="text-blue-600 shrink-0" />
               <span>
-                {isTranslatingQual
+                {translationStatus[langCode] === 'loading'
                   ? t('translatingContent').replace('{lang}', lang.toUpperCase())
+                  : translationStatus[langCode] === 'error'
+                    ? t('translationFailed')
                   : (showOriginal
                       ? t('viewingOriginalBanner')
                       : t('autoTranslatedBanner').replace('{lang}', lang.toUpperCase()))}
               </span>
             </div>
-            <button
+            {translationStatus[langCode] === 'error' ? (
+              <button
+                type="button"
+                onClick={() => setTranslationRetry((value) => value + 1)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs transition shadow cursor-pointer shrink-0 ml-4"
+              >
+                {t('retryTranslation')}
+              </button>
+            ) : <button
               type="button"
               id="see-original-toggle-btn"
               onClick={() => setShowOriginal((prev) => !prev)}
-              disabled={isTranslatingQual && !translatedQualMap[lang]}
+              disabled={translationStatus[langCode] === 'loading' && !translatedQualMap[langCode]}
               className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-xs transition shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ml-4"
             >
               {showOriginal ? t('viewTranslated') : t('viewOriginal')}
-            </button>
+            </button>}
           </div>
         )}
 
@@ -424,7 +448,7 @@ export default function QualificationPage({ onLogout }) {
         </div>
 
         <div className="bg-white rounded-[2rem] md:rounded-[4rem] shadow-2xl border border-slate-100 p-6 md:p-16 min-h-[600px]">
-          {isTranslatingQual && !translatedQualMap[lang] && (
+          {translationStatus[langCode] === 'loading' && !translatedQualMap[langCode] && (
             <TranslationShimmer label={t('translatingContent').replace('{lang}', lang.toUpperCase())} />
           )}
           {loading ? (
