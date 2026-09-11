@@ -241,26 +241,10 @@ async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en')
   const clone = JSON.parse(JSON.stringify(spec));
   const items = [];
 
-  // Master
-  if (clone.master?.nome) {
-    items.push({ id: 'master', fields: { nome: clone.master.nome } });
-  }
-
-  // Header
-  if (clone.header) {
-    const hFields = {};
-    ['ean', 'uvcWeight', 'revision'].forEach((f) => {
-      if (clone.header[f] && clone.header[f].trim()) hFields[f] = clone.header[f];
-    });
-    if (Object.keys(hFields).length) {
-      items.push({ id: 'header', fields: hFields });
-    }
-  }
-
   // Section A
   if (clone.a) {
     const aFields = {};
-    ['legalName', 'brand', 'claim', 'ingredients', 'allergensNote', 'batchDecode', 'intendedUse', 'storage', 'envLabel', 'packMode', 'producedIn', 'tmc', 'giorniGarantiti'].forEach((f) => {
+    ['claim', 'ingredients', 'allergensNote', 'intendedUse', 'storage', 'envLabel', 'packMode'].forEach((f) => {
       if (clone.a[f] && clone.a[f].trim()) aFields[f] = clone.a[f];
     });
     if (Object.keys(aFields).length) {
@@ -356,13 +340,8 @@ async function translateSpecObject(spec, sourceLang = 'auto', targetLang = 'en')
 
   const result = await translateBatch(items, sourceLang, targetLang);
 
-  // Apply translations back to clone
-  if (result.master?.nome) clone.master.nome = result.master.nome;
-
-  if (result.header && clone.header) {
-    Object.assign(clone.header, result.header);
-  }
-
+  // Apply translations back to clone. Identity/reference fields were never
+  // sent to the model, so the original values remain untouched.
   if (result.section_a && clone.a) {
     Object.assign(clone.a, result.section_a);
   }
@@ -442,25 +421,14 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
   }
 
   // File C: product rows
-  if (Array.isArray(clone.fileC)) {
-    clone.fileC.forEach((p, idx) => {
-      const pFields = {};
-      if (p.tipologia) pFields.tipologia = p.tipologia;
-      if (p.denominazione) pFields.denominazione = p.denominazione;
-      if (p.origine) pFields.origine = p.origine;
-      if (p.shelfLife) pFields.shelfLife = p.shelfLife;
-      if (Object.keys(pFields).length) {
-        items.push({ id: `filec_${idx}`, fields: pFields });
-      }
-    });
-  }
+  // Product identity and structured values stay exactly as entered. There is
+  // no free-text product description in this section to send to translation.
 
-  // Raw materials
+  // Raw materials: the material name and frequency are reference values;
+  // only supplier notes are descriptive text.
   if (Array.isArray(clone.rawMaterials)) {
     clone.rawMaterials.forEach((m, idx) => {
       const rmFields = {};
-      if (m.name) rmFields.name = m.name;
-      if (m.frequency) rmFields.frequency = m.frequency;
       if (m.notes) rmFields.notes = m.notes;
       if (Object.keys(rmFields).length) {
         items.push({ id: `rm_${idx}`, fields: rmFields });
@@ -482,39 +450,6 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
     }
   }
 
-  // Anagrafica
-  if (clone.anagrafica) {
-    const anaFields = {};
-    ['rs', 'piva', 'sede', 'citta', 'provincia', 'cap', 'nazione'].forEach((f) => {
-      if (clone.anagrafica[f] && clone.anagrafica[f].trim()) anaFields[f] = clone.anagrafica[f];
-    });
-    if (Object.keys(anaFields).length) {
-      items.push({ id: 'anagrafica', fields: anaFields });
-    }
-  }
-
-  // Contatti
-  if (clone.contatti) {
-    Object.entries(clone.contatti).forEach(([dept, data]) => {
-      const cFields = {};
-      ['nome', 'email', 'tel'].forEach((f) => {
-        if (data[f] && data[f].trim()) cFields[f] = data[f];
-      });
-      if (Object.keys(cFields).length) {
-        items.push({ id: `contatto_${dept}`, fields: cFields });
-      }
-    });
-  }
-
-  // Certificazioni
-  if (Array.isArray(clone.certificazioni)) {
-    clone.certificazioni.forEach((c, idx) => {
-      if (c.type && c.type.trim()) {
-        items.push({ id: `cert_${idx}`, fields: { type: c.type } });
-      }
-    });
-  }
-
   // HACCP
   if (clone.haccp) {
     ['manualExtract', 'flowChart', 'prp', 'oprpCcp'].forEach((key) => {
@@ -526,15 +461,6 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
         });
       }
     });
-  }
-
-  // PDF Place
-  if (clone.pdfPlace && clone.pdfPlace.trim()) {
-    items.push({ id: 'pdf_place', fields: { pdfPlace: clone.pdfPlace } });
-  }
-
-  if (clone.impegnoSchede?.place && clone.impegnoSchede.place.trim()) {
-    items.push({ id: 'impegno_place', fields: { place: clone.impegnoSchede.place } });
   }
 
   if (!items.length) return clone;
@@ -558,18 +484,10 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
     });
   }
 
-  if (Array.isArray(clone.fileC)) {
-    clone.fileC.forEach((p, idx) => {
-      if (result[`filec_${idx}`]) {
-        Object.assign(p, result[`filec_${idx}`]);
-      }
-    });
-  }
-
   if (Array.isArray(clone.rawMaterials)) {
     clone.rawMaterials.forEach((m, idx) => {
-      if (result[`rm_${idx}`]) {
-        Object.assign(m, result[`rm_${idx}`]);
+      if (result[`rm_${idx}`]?.notes !== undefined) {
+        m.notes = result[`rm_${idx}`].notes;
       }
     });
   }
@@ -583,26 +501,6 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
     }
   }
 
-  if (clone.anagrafica && result.anagrafica) {
-    Object.assign(clone.anagrafica, result.anagrafica);
-  }
-
-  if (clone.contatti) {
-    Object.keys(clone.contatti).forEach((dept) => {
-      if (result[`contatto_${dept}`]) {
-        Object.assign(clone.contatti[dept], result[`contatto_${dept}`]);
-      }
-    });
-  }
-
-  if (Array.isArray(clone.certificazioni)) {
-    clone.certificazioni.forEach((c, idx) => {
-      if (result[`cert_${idx}`]?.type !== undefined) {
-        c.type = result[`cert_${idx}`].type;
-      }
-    });
-  }
-
   if (clone.haccp) {
     ['manualExtract', 'flowChart', 'prp', 'oprpCcp'].forEach((key) => {
       if (Array.isArray(clone.haccp[key])) {
@@ -613,14 +511,6 @@ async function translateQualDataObject(qualData, sourceLang = 'auto', targetLang
         });
       }
     });
-  }
-
-  if (result.pdf_place?.pdfPlace) {
-    clone.pdfPlace = result.pdf_place.pdfPlace;
-  }
-
-  if (result.impegno_place?.place && clone.impegnoSchede) {
-    clone.impegnoSchede.place = result.impegno_place.place;
   }
 
   return clone;

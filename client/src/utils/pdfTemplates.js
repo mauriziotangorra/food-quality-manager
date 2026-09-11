@@ -68,6 +68,15 @@ function formatAnswer(val, t) {
   return val;
 }
 
+const CONTACT_DEPARTMENT_KEYS = {
+  sales: 'deptSales',
+  marketing: 'deptMarketing',
+  qualita: 'deptQualita',
+  amministrazione: 'deptAmministrazione',
+  customer: 'deptCustomer',
+  logistica: 'deptLogistica',
+};
+
 function openPrintWindow(title, bodyHtml, extraStyle = '') {
   const win = window.open('', '_blank');
   if (!win) {
@@ -125,7 +134,7 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
         <tr><th>${t('dept')}</th><th>${t('name')}</th><th>${t('email')}</th><th>${t('tel')}</th></tr>
         ${Object.entries(qualData.contatti || {}).map(([dept, data]) => `
           <tr>
-            <td style="text-transform: uppercase;"><b>${dept}</b></td>
+            <td style="text-transform: uppercase;"><b>${t(CONTACT_DEPARTMENT_KEYS[dept] || 'dept')}</b></td>
             <td>${data?.nome || '-'}</td>
             <td>${data?.email || '-'}</td>
             <td>${data?.tel || '-'}</td>
@@ -270,12 +279,12 @@ export function generateQualificationDossierPDF({ qualData, supplierName, global
       <table>
         <tr><th style="width:25%">${t('typology')}</th><th style="width:40%">${t('appliesTo')}</th><th style="width:35%">${t('attState')}</th></tr>
         <tr>
-          <td><b>Food Fraud</b></td>
+          <td><b>${t('foodFraudLabel')}</b></td>
           <td>${qualData.foodFraudDefense?.foodFraud?.appliesTo || '-'}</td>
           <td>${(qualData.foodFraudDefense?.foodFraud?.files || []).length ? t('loaded') : t('missing')}</td>
         </tr>
         <tr>
-          <td><b>Food Defense</b></td>
+          <td><b>${t('foodDefenseLabel')}</b></td>
           <td>${qualData.foodFraudDefense?.foodDefense?.appliesTo || '-'}</td>
           <td>${(qualData.foodFraudDefense?.foodDefense?.files || []).length ? t('loaded') : t('missing')}</td>
         </tr>

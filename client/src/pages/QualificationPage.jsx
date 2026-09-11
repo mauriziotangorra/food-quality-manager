@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useModal } from "../hooks/useModal";
 import { api } from "../services/api";
 import { DEFAULT_CERTIFICAZIONI } from "../constants/defaults";
+import TranslationShimmer from "../components/TranslationShimmer";
 
 import AnagraficaTab from "./qualification/AnagraficaTab";
 import ContattiTab from "./qualification/ContattiTab";
@@ -147,11 +148,17 @@ export default function QualificationPage({ onLogout }) {
         ),
       },
 
-      // File C: Products
-      fileC: (Array.isArray(tr.fileC) && tr.fileC.length) ? tr.fileC : qualData.fileC,
+      // File C: product identity and structured values always stay original.
+      fileC: qualData.fileC,
 
-      // Raw Materials
-      rawMaterials: (Array.isArray(tr.rawMaterials) && tr.rawMaterials.length) ? tr.rawMaterials : qualData.rawMaterials,
+      // Raw materials: only supplier notes are translatable; names and
+      // frequencies remain the original reference values.
+      rawMaterials: Array.isArray(qualData.rawMaterials)
+        ? qualData.rawMaterials.map((material, index) => ({
+            ...material,
+            notes: tr.rawMaterials?.[index]?.notes ?? material.notes,
+          }))
+        : qualData.rawMaterials,
 
       // Food Fraud & Defense
       foodFraudDefense: tr.foodFraudDefense ? {
@@ -183,21 +190,11 @@ export default function QualificationPage({ onLogout }) {
         ),
       } : qualData.fileA,
 
-      // Anagrafica (Company details)
-      anagrafica: tr.anagrafica ? { ...qualData.anagrafica, ...tr.anagrafica } : qualData.anagrafica,
-      
-      // Contatti (Contacts)
-      contatti: tr.contatti ? Object.fromEntries(
-        Object.entries(qualData.contatti || {}).map(([dept, data]) => [
-          dept,
-          tr.contatti[dept] ? { ...data, ...tr.contatti[dept] } : data
-        ])
-      ) : qualData.contatti,
-      
-      // Certificazioni
-      certificazioni: (tr.certificazioni && Array.isArray(qualData.certificazioni)) 
-        ? qualData.certificazioni.map((c, i) => (tr.certificazioni[i]?.type !== undefined ? { ...c, type: tr.certificazioni[i].type } : c))
-        : qualData.certificazioni,
+      // Company details, contacts, certification names, places, and dates are
+      // identity/reference values and always remain exactly as entered.
+      anagrafica: qualData.anagrafica,
+      contatti: qualData.contatti,
+      certificazioni: qualData.certificazioni,
         
       // HACCP
       haccp: tr.haccp ? {
@@ -212,13 +209,9 @@ export default function QualificationPage({ onLogout }) {
         )
       } : qualData.haccp,
       
-      // Impegno Schede
-      impegnoSchede: tr.impegnoSchede?.place ? {
-        ...qualData.impegnoSchede,
-        place: tr.impegnoSchede.place
-      } : qualData.impegnoSchede,
-
-      pdfPlace: tr.pdfPlace || qualData.pdfPlace,
+      // Places and dates are reference values, not translatable content.
+      impegnoSchede: qualData.impegnoSchede,
+      pdfPlace: qualData.pdfPlace,
       pdfDate: qualData.pdfDate,
     };
   }, [showOriginal, lang, translatedQualMap, qualData]);
@@ -277,12 +270,9 @@ export default function QualificationPage({ onLogout }) {
       if (!showOriginal && lang !== 'it') {
         setTranslatedQualMap((prevMap) => {
           const currentTr = prevMap[lang];
-          if (!currentTr) return prevMap;
+          if (!currentTr) return {};
           const nextTr = typeof updater === "function" ? updater(currentTr) : updater;
-          return {
-            ...prevMap,
-            [lang]: nextTr,
-          };
+          return { [lang]: nextTr };
         });
       } else {
         // If editing in original language, clear translations so they are re-fetched when switching
@@ -332,6 +322,21 @@ export default function QualificationPage({ onLogout }) {
     if (ok) showAlert(t("alertSaved"));
   };
 
+  const getTranslatedQualData = async (data) => {
+    if (lang === 'it') return data;
+    if (translatedQualMap[lang]) return translatedQualMap[lang];
+
+    const res = await api.translateQualifications(supplier.id, {
+      targetLang: lang,
+      sourceLang: 'auto',
+      scope: 'qual',
+      qualData: data,
+    });
+    if (!res.qualData) throw new Error(t('translateMissingError'));
+    setTranslatedQualMap((prev) => ({ ...prev, [lang]: res.qualData }));
+    return res.qualData;
+  };
+
   if (!supplier) return null;
 
   const tabProps = {
@@ -348,6 +353,8 @@ export default function QualificationPage({ onLogout }) {
     supplierName: supplier.name,
     isTestUser,
     saveImmediate: saveQualDataPreservingSpecs,
+    getTranslatedQualData,
+    showAlert,
   };
 
   return (
@@ -417,6 +424,9 @@ export default function QualificationPage({ onLogout }) {
         </div>
 
         <div className="bg-white rounded-[2rem] md:rounded-[4rem] shadow-2xl border border-slate-100 p-6 md:p-16 min-h-[600px]">
+          {isTranslatingQual && !translatedQualMap[lang] && (
+            <TranslationShimmer label={t('translatingContent').replace('{lang}', lang.toUpperCase())} />
+          )}
           {loading ? (
             <div className="text-center text-slate-400 font-bold py-20">{t("loading")}</div>
           ) : (

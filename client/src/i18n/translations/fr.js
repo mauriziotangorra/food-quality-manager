@@ -466,8 +466,8 @@ export default {
   noRawMaterialsHint: 'Aucune matière première présente. Utilisez "Ajouter une Matière Première" pour commencer.',
 
   // Food Fraud / Food Defense
-  foodFraudLabel: "Food Fraud",
-  foodDefenseLabel: "Food Defense",
+  foodFraudLabel: "Fraude alimentaire",
+  foodDefenseLabel: "Défense alimentaire",
   appliesToPlaceholder: "Si le document ne concerne que des produits/familles spécifiques, indiquez-les ici...",
 
   // MOCA / Emballage
